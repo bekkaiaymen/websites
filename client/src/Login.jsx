@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { buildApiUrl } from './api';
 
 function Login({ onLoginSuccess }) {
   const [phone, setPhone] = useState('');
@@ -12,8 +13,7 @@ function Login({ onLoginSuccess }) {
     setLoading(true);
 
     try {
-      const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
+      const response = await fetch(buildApiUrl('/api/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, password })

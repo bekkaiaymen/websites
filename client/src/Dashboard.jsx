@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { buildApiUrl } from './api';
 
 function Dashboard({ onLogout }) {
   const [orders, setOrders] = useState([]);
@@ -20,9 +21,8 @@ function Dashboard({ onLogout }) {
   const fetchOrders = async () => {
     try {
       const token = localStorage.getItem('token');
-      const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      
-      const response = await fetch(`${BACKEND_URL}/api/orders`, {
+
+      const response = await fetch(buildApiUrl('/api/orders'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -51,9 +51,8 @@ function Dashboard({ onLogout }) {
 
     try {
       const token = localStorage.getItem('token');
-      const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      
-      const response = await fetch(`${BACKEND_URL}/api/orders`, {
+
+      const response = await fetch(buildApiUrl('/api/orders'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
