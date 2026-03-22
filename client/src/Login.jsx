@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 function Login({ onLoginSuccess }) {
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -16,7 +16,7 @@ function Login({ onLoginSuccess }) {
       const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ phone, password })
       });
 
       const data = await response.json();
@@ -42,10 +42,10 @@ function Login({ onLoginSuccess }) {
         <form onSubmit={handleLogin}>
           <div className="form-group">
             <input
-              type="email"
-              placeholder="البريد الإلكتروني"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="tel"
+              placeholder="رقم الهاتف"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               required
             />
           </div>

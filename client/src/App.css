@@ -177,6 +177,54 @@ input:focus, select:focus, textarea:focus {
   text-align: right;
 }
 
+.location-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.location-btn {
+  width: 100%;
+  padding: 0.8rem;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.location-btn:hover:not(:disabled) {
+  background-color: #2980b9;
+}
+
+.location-btn:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+}
+
+.location-success {
+  background-color: #d4edda;
+  color: #155724;
+  padding: 0.6rem;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.location-coords {
+  background-color: #e7f3ff;
+  color: #004085;
+  padding: 0.6rem;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.85rem;
+  border: 1px solid #b3d9ff;
+}
+
 /* === MAIN CONTENT === */
 .main-content {
   flex: 1;

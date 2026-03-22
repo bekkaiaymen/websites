@@ -2,13 +2,58 @@ import React, { useState } from 'react';
 
 function Register({ onRegisterSuccess }) {
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
+  const [municipality, setMunicipality] = useState('');
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [userType, setUserType] = useState('customer');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationSuccess, setLocationSuccess] = useState(false);
+
+  const handleGetLocation = () => {
+    setLocationLoading(true);
+    setError('');
+
+    if (!navigator.geolocation) {
+      setError('الموقع الغير مدعوم في المتصفح الخاص بك');
+      setLocationLoading(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLatitude(position.coords.latitude);
+        setLongitude(position.coords.longitude);
+        setLocationSuccess(true);
+        setLocationLoading(false);
+        setError('');
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        setError('تعذر الحصول على الموقع. تأكد من تفعيل خدمات الموقع');
+        setLocationLoading(false);
+      }
+    );
+  };
+
+  const municipalities = [
+    'غرداية',
+    'بني يزقن',
+    'بوهراوة',
+    'مليكة',
+    'العطف',
+    'القرارة',
+    'بريان',
+    'زلفانة',
+    'متليلي',
+    'سبسب',
+    'المنصورة'
+  ];
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -24,6 +69,11 @@ function Register({ onRegisterSuccess }) {
       return;
     }
 
+    if (!municipality) {
+      setError('اختر البلدية');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -31,7 +81,16 @@ function Register({ onRegisterSuccess }) {
       const response = await fetch(`${BACKEND_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, phone, password, userType })
+        body: JSON.stringify({
+          name,
+          phone,
+          whatsapp: whatsapp || phone,
+          municipality,
+          latitude: latitude || null,
+          longitude: longitude || null,
+          password,
+          userType
+        })
       });
 
       const data = await response.json();
@@ -64,15 +123,7 @@ function Register({ onRegisterSuccess }) {
               required
             />
           </div>
-          <div className="form-group">
-            <input
-              type="email"
-              placeholder="البريد الإلكتروني"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
+
           <div className="form-group">
             <input
               type="tel"
@@ -82,12 +133,57 @@ function Register({ onRegisterSuccess }) {
               required
             />
           </div>
+
+          <div className="form-group">
+            <input
+              type="tel"
+              placeholder="رقم الواتساب (اختياري)"
+              value={whatsapp}
+              onChange={(e) => setWhatsapp(e.target.value)}
+            />
+          </div>
+
+          <div className="form-group">
+            <select 
+              value={municipality} 
+              onChange={(e) => setMunicipality(e.target.value)}
+              required
+            >
+              <option value="">اختر البلدية</option>
+              {municipalities.map((mun) => (
+                <option key={mun} value={mun}>{mun}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group location-group">
+            <button 
+              type="button" 
+              className="location-btn"
+              onClick={handleGetLocation}
+              disabled={locationLoading}
+            >
+              {locationLoading ? 'جاري الحصول على الموقع...' : '📍 تحديد الموقع الدقيق'}
+            </button>
+            {locationSuccess && (
+              <div className="location-success">
+                ✅ تم الحصول على الموقع بنجاح
+              </div>
+            )}
+            {latitude && longitude && (
+              <div className="location-coords">
+                الإحداثيات: {latitude.toFixed(4)}, {longitude.toFixed(4)}
+              </div>
+            )}
+          </div>
+
           <div className="form-group">
             <select value={userType} onChange={(e) => setUserType(e.target.value)}>
-              <option value="customer">زبون عادي</option>
+              <option value="customer">زبون</option>
               <option value="artisan">حرفي أو متجر</option>
             </select>
           </div>
+
           <div className="form-group">
             <input
               type="password"
@@ -97,6 +193,7 @@ function Register({ onRegisterSuccess }) {
               required
             />
           </div>
+
           <div className="form-group">
             <input
               type="password"
@@ -106,6 +203,7 @@ function Register({ onRegisterSuccess }) {
               required
             />
           </div>
+
           {error && <div className="error-message">{error}</div>}
           <button type="submit" disabled={loading} className="submit-btn">
             {loading ? 'جاري الإنشاء...' : 'إنشاء حساب'}

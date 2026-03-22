@@ -24,8 +24,11 @@ mongoose.connect(MONGODB_URI)
 // User Schema
 const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  phone: { type: String, required: true },
+  phone: { type: String, required: true, unique: true },
+  whatsapp: { type: String },
+  municipality: { type: String, required: true },
+  latitude: { type: Number },
+  longitude: { type: Number },
   password: { type: String, required: true },
   userType: { type: String, enum: ['customer', 'artisan'], default: 'customer' },
   createdAt: { type: Date, default: Date.now }
@@ -67,17 +70,20 @@ app.get('/', (req, res) => {
 // Register (Sign Up)
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { name, email, phone, password, userType } = req.body;
+    const { name, phone, whatsapp, municipality, latitude, longitude, password, userType } = req.body;
 
-    if (await User.findOne({ email })) {
-      return res.status(400).json({ success: false, message: 'البريد الإلكتروني مسجل بالفعل' });
+    if (await User.findOne({ phone })) {
+      return res.status(400).json({ success: false, message: 'رقم الهاتف مسجل بالفعل' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new User({
       name,
-      email,
       phone,
+      whatsapp: whatsapp || phone,
+      municipality,
+      latitude,
+      longitude,
       password: hashedPassword,
       userType: userType || 'customer'
     });
@@ -95,16 +101,16 @@ app.post('/api/auth/register', async (req, res) => {
 // Login
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { phone, password } = req.body;
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ phone });
     if (!user) {
-      return res.status(400).json({ success: false, message: 'بريد أو كلمة سر خاطئة' });
+      return res.status(400).json({ success: false, message: 'رقم هاتف أو كلمة سر خاطئة' });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(400).json({ success: false, message: 'بريد أو كلمة سر خاطئة' });
+      return res.status(400).json({ success: false, message: 'رقم هاتف أو كلمة سر خاطئة' });
     }
 
     const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '7d' });
