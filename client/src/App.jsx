@@ -1,161 +1,140 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
+import Login from './Login';
+import Register from './Register';
+import Dashboard from './Dashboard';
 
 function App() {
-  const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    pickupLocation: 'وسط غرداية',
-    deliveryLocation: '',
-    itemDescription: ''
-  });
-  const [message, setMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentPage, setCurrentPage] = useState('home'); // home, login, register, dashboard
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // تحديث القيم عند التغيير
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  // إرسال الطلب
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setMessage('');
-
-    try {
-      // Use environment variable for production, fallback to localhost for development
-      const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/orders';
-      
-      const response = await fetch(BACKEND_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setMessage('تم إرسال طلبك بنجاح! سنتصل بك فوراً لتأكيد الطلب.');
-        setFormData({ name: '', phone: '', pickupLocation: 'وسط غرداية', deliveryLocation: '', itemDescription: '' });
-      } else {
-        setMessage('حدث خطأ: ' + data.message);
-      }
-    } catch (error) {
-      console.error('Network error:', error);
-      setMessage('تعذر الاتصال بالخادم. تأكد من تشغيل الخادم والاتصال بالإنترنت.');
-    } finally {
-      setIsSubmitting(false);
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      setIsAuthenticated(true);
+      setCurrentPage('dashboard');
     }
+  }, []);
+
+  const handleLoginSuccess = () => {
+    setIsAuthenticated(true);
+    setCurrentPage('dashboard');
   };
 
+  const handleRegisterSuccess = () => {
+    setIsAuthenticated(true);
+    setCurrentPage('dashboard');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userName');
+    setIsAuthenticated(false);
+    setCurrentPage('home');
+  };
+
+  if (isAuthenticated && currentPage === 'dashboard') {
+    return <Dashboard onLogout={handleLogout} />;
+  }
+
+  if (currentPage === 'login') {
+    return (
+      <>
+        <div className="auth-nav">
+          <button onClick={() => setCurrentPage('home')} className="nav-btn">← عودة</button>
+          <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage('register'); }} className="nav-link">إنشاء حساب جديد</a>
+        </div>
+        <Login onLoginSuccess={handleLoginSuccess} />
+      </>
+    );
+  }
+
+  if (currentPage === 'register') {
+    return (
+      <>
+        <div className="auth-nav">
+          <button onClick={() => setCurrentPage('home')} className="nav-btn">← عودة</button>
+          <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage('login'); }} className="nav-link">تسجيل دخول</a>
+        </div>
+        <Register onRegisterSuccess={handleRegisterSuccess} />
+      </>
+    );
+  }
+
+  // Home page
   return (
     <div className="app-container">
       <header className="header">
-        <h1>توصيل غرداية السريع 📦</h1>
-        <p>خدمتكم راحتنا - في كل ربوع وادي ميزاب</p>
+        <div className="header-content">
+          <h1>توصيل غرداية السريع 📦</h1>
+          <p>خدمتكم راحتنا - في كل ربوع وادي ميزاب</p>
+          <div className="header-buttons">
+            <button onClick={() => setCurrentPage('login')} className="btn-login">تسجيل دخول</button>
+            <button onClick={() => setCurrentPage('register')} className="btn-register">إنشاء حساب</button>
+          </div>
+        </div>
       </header>
 
       <main className="main-content">
-        <section className="order-form-section">
-          <h2>اطلب توصيل الآن</h2>
-          <form className="order-form" onSubmit={handleSubmit}>
-            
-            <div className="form-group">
-              <label>الاسم الكامل</label>
-              <input 
-                type="text" 
-                name="name" 
-                value={formData.name} 
-                onChange={handleChange} 
-                placeholder="مثال: محمد .." 
-                required 
-              />
+        <section className="features-section">
+          <h2>لماذا تختار خدمتنا؟</h2>
+          <div className="features-grid">
+            <div className="feature-card">
+              <span className="feature-icon">⚡</span>
+              <h3>سريعة جداً</h3>
+              <p>نوصل طلبك في أسرع وقت ممكن</p>
             </div>
-
-            <div className="form-group">
-              <label>رقم الهاتف</label>
-              <input 
-                type="tel" 
-                name="phone" 
-                value={formData.phone} 
-                onChange={handleChange} 
-                placeholder="06xxxxxxxx" 
-                required 
-              />
+            <div className="feature-card">
+              <span className="feature-icon">🛡️</span>
+              <h3>آمنة وموثوقة</h3>
+              <p>نتعامل مع طلبك بكل حذر واحترافية</p>
             </div>
-
-            <div className="form-group">
-              <label>مكان الاستلام (من أين نأخذ الغرض؟)</label>
-              <select name="pickupLocation" value={formData.pickupLocation} onChange={handleChange}>
-                <option value="وسط غرداية">وسط غرداية</option>
-                <option value="بني يزقن">بني يزقن</option>
-                <option value="بوهراوة">بوهراوة</option>
-                <option value="مليكة">مليكة</option>
-                <option value="العطف">العطف</option>
-                <option value="القرارة">القرارة</option>
-                <option value="بريان">بريان</option>
-                <option value="زلفانة">زلفانة</option>
-                <option value="متليلي">متليلي</option>
-                <option value="سبسب">سبسب</option>
-                <option value="المنصورة">المنصورة</option>
-              </select>
+            <div className="feature-card">
+              <span className="feature-icon">📍</span>
+              <h3>تغطية شاملة</h3>
+              <p>نصل إلى كل أرجاء غرداية ووادي ميزاب</p>
             </div>
-
-            <div className="form-group">
-              <label>مكان التوصيل (إلى أين نذهب؟)</label>
-              <input 
-                type="text" 
-                name="deliveryLocation" 
-                value={formData.deliveryLocation} 
-                onChange={handleChange} 
-                placeholder="اسم الحي أو المعلم القريب" 
-                required 
-              />
+            <div className="feature-card">
+              <span className="feature-icon">💰</span>
+              <h3>أسعار تنافسية</h3>
+              <p>أفضل أسعار في السوق المحلي</p>
             </div>
-
-            <div className="form-group">
-              <label>وصف الغرض</label>
-              <textarea 
-                name="itemDescription" 
-                value={formData.itemDescription} 
-                onChange={handleChange} 
-                placeholder="ماذا تريد توصيله؟ (مثلاً: وثائق، طرد صغير، أكل..)" 
-                rows="3"
-              ></textarea>
-            </div>
-
-            <button type="submit" disabled={isSubmitting} className="submit-btn">
-              {isSubmitting ? 'جاري الإرسال...' : 'تأكيد الطلب'}
-            </button>
-          </form>
-
-          {message && <div className={`message-box ${message.includes('خطأ') ? 'error' : 'success'}`}>{message}</div>}
+          </div>
         </section>
-        
+
         <section className="info-section">
           <h3>كيف نعمل؟</h3>
           <div className="steps">
             <div className="step">
               <span>1</span>
-              <p>املأ الاستمارة</p>
+              <p>أنشئ حسابك</p>
             </div>
             <div className="step">
               <span>2</span>
-              <p>نتصل بك للتأكيد</p>
+              <p>ادخل بيانات الطلب</p>
             </div>
             <div className="step">
               <span>3</span>
-              <p>نصلك في أسرع وقت</p>
+              <p>نتصل بك للتأكيد</p>
+            </div>
+            <div className="step">
+              <span>4</span>
+              <p>نوصل الطلب بسرعة</p>
             </div>
           </div>
+        </section>
+
+        <section className="cta-section">
+          <h2>هل أنت متجر أو حرفي؟</h2>
+          <p>انضم إلينا كشريك وزيد مبيعاتك من خلال خدمتنا المتقدمة</p>
+          <button onClick={() => setCurrentPage('register')} className="btn-primary">ابدأ الآن مجاناً</button>
         </section>
       </main>
 
       <footer className="footer">
-        <p>© 2026 خدمة توصيل غرداية. جميع الحقوق محفوظة.</p>
+        <p>© 2026 خدمة توصيل غرداية. جميع الحقوق محفوظة. 
+        <br/>يمكن تحميل التطبيق كـ PWA على هاتفك</p>
       </footer>
     </div>
   )
