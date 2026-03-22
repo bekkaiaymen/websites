@@ -84,7 +84,7 @@ function Register({ onRegisterSuccess }) {
         body: JSON.stringify({
           name,
           phone,
-          whatsapp: whatsapp || phone,
+          whatsapp,
           municipality,
           latitude: latitude || null,
           longitude: longitude || null,
@@ -137,9 +137,10 @@ function Register({ onRegisterSuccess }) {
           <div className="form-group">
             <input
               type="tel"
-              placeholder="رقم الواتساب (اختياري)"
+              placeholder="رقم الواتساب"
               value={whatsapp}
               onChange={(e) => setWhatsapp(e.target.value)}
+              required
             />
           </div>
 
@@ -163,7 +164,7 @@ function Register({ onRegisterSuccess }) {
               onClick={handleGetLocation}
               disabled={locationLoading}
             >
-              {locationLoading ? 'جاري الحصول على الموقع...' : '📍 تحديد الموقع الدقيق'}
+              {locationLoading ? 'جاري تحديد الموقع...' : 'تحديد موقع الدقيق لتوصيل اسرع'}
             </button>
             {locationSuccess && (
               <div className="location-success">

@@ -25,7 +25,7 @@ mongoose.connect(MONGODB_URI)
 const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
   phone: { type: String, required: true, unique: true },
-  whatsapp: { type: String },
+  whatsapp: { type: String, required: true },
   municipality: { type: String, required: true },
   latitude: { type: Number },
   longitude: { type: Number },
@@ -80,7 +80,7 @@ app.post('/api/auth/register', async (req, res) => {
     const newUser = new User({
       name,
       phone,
-      whatsapp: whatsapp || phone,
+      whatsapp,
       municipality,
       latitude,
       longitude,
