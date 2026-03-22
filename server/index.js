@@ -36,6 +36,29 @@ const UserSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', UserSchema);
 
+async function cleanupLegacyUserIndexes() {
+  try {
+    if (mongoose.connection.readyState !== 1) return;
+    const indexes = await User.collection.indexes();
+    const hasLegacyEmailIndex = indexes.some((idx) => idx.name === 'email_1');
+    if (hasLegacyEmailIndex) {
+      await User.collection.dropIndex('email_1');
+      console.log('Dropped legacy index: email_1');
+    }
+  } catch (error) {
+    // Ignore "index not found" and continue startup safely.
+    if (error.codeName !== 'IndexNotFound') {
+      console.log('Legacy index cleanup warning:', error.message);
+    }
+  }
+}
+
+if (mongoose.connection.readyState === 1) {
+  cleanupLegacyUserIndexes();
+} else {
+  mongoose.connection.once('open', cleanupLegacyUserIndexes);
+}
+
 // Order Schema
 const OrderSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -72,8 +95,16 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, phone, whatsapp, municipality, latitude, longitude, password, userType } = req.body;
 
+    if (!whatsapp) {
+      return res.status(400).json({ success: false, message: 'رقم الواتساب مطلوب' });
+    }
+
     if (await User.findOne({ phone })) {
       return res.status(400).json({ success: false, message: 'رقم الهاتف مسجل بالفعل' });
+    }
+
+    if (await User.findOne({ whatsapp })) {
+      return res.status(400).json({ success: false, message: 'رقم الواتساب مسجل بالفعل' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -94,7 +125,19 @@ app.post('/api/auth/register', async (req, res) => {
     res.status(201).json({ success: true, message: 'تم إنشاء الحساب بنجاح!', token, userId: newUser._id });
   } catch (error) {
     console.error('Register error:', error);
-    res.status(500).json({ success: false, message: 'خطأ في التسجيل' });
+    if (error && error.code === 11000) {
+      const duplicateField = Object.keys(error.keyPattern || {})[0];
+      if (duplicateField === 'phone') {
+        return res.status(400).json({ success: false, message: 'رقم الهاتف مسجل بالفعل' });
+      }
+      if (duplicateField === 'whatsapp') {
+        return res.status(400).json({ success: false, message: 'رقم الواتساب مسجل بالفعل' });
+      }
+      if (duplicateField === 'email') {
+        return res.status(400).json({ success: false, message: 'يوجد تعارض في فهرس قديم، أعد المحاولة بعد إعادة تشغيل الخدمة' });
+      }
+    }
+    res.status(500).json({ success: false, message: 'خطأ في التسجيل', debug: error.message });
   }
 });
 
