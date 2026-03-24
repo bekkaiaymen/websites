@@ -72,19 +72,4 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-});
-
-// GET /api/orders - Fetch all orders (Admin)
-app.get('/api/orders', async (req, res) => {
-  try {
-    const orders = await Order.find().sort({ createdAt: -1 });
-    res.json(orders);
-  } catch (error) {
-    console.error('Error fetching orders:', error);
-    res.status(500).json({ error: 'Server error fetching orders' });
-  }
-});
-
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
