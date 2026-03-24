@@ -31,8 +31,9 @@ const Products = () => {
   // Logic for Local Products
   const handleLocalOrder = async (product) => {
     // Save minimal order info
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
     try {
-        await fetch('http://localhost:5000/api/orders', {
+        await fetch(`${API_URL}/api/orders`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -77,8 +78,9 @@ const Products = () => {
     };
 
     // 1. Save to DB
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
     try {
-      await fetch('http://localhost:5000/api/orders', {
+      await fetch(`${API_URL}/api/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderPayload),
