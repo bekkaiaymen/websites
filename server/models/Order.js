@@ -3,31 +3,46 @@ const mongoose = require('mongoose');
 const OrderSchema = new mongoose.Schema({
   orderType: {
     type: String,
-    enum: ['Custom Box', 'Standard Product'],
+    enum: ['Custom Box', 'Local Delivery', 'National Delivery'],
     required: true
   },
+  // Specific to Custom Box
   budget: {
-    type: Number,
-    required: function() { return this.orderType === 'Custom Box'; }
+    type: Number
   },
   flavors: [{
     type: String
   }],
+  // Specific to Products
   productName: {
-    type: String,
-    required: function() { return this.orderType === 'Standard Product'; }
+    type: String
   },
-  status: {
-    type: String,
-    enum: ['Pending', 'Completed', 'Cancelled'],
-    default: 'Pending'
+  // Customer Details (Required for National Delivery)
+  customerName: {
+    type: String
   },
   customerPhone: {
-    type: String, // Useful to have, though not explicitly asked, good practice.
+    type: String
+  },
+  wilaya: {
+    type: String
+  },
+  address: {
+    type: String
+  },
+  // System Fields
+  status: {
+    type: String,
+    enum: ['Pending', 'Confirmed', 'Delivered', 'Cancelled'],
+    default: 'Pending'
   },
   createdAt: {
     type: Date,
     default: Date.now
+  }
+});
+
+module.exports = mongoose.model('Order', OrderSchema);
   }
 });
 

@@ -1,22 +1,35 @@
 import React, { useState } from 'react';
-import { Package, Check, Smartphone, Loader2 } from 'lucide-react';
+import { Package, Check, Loader2 } from 'lucide-react';
 
 const CustomBoxBuilder = () => {
   const [budget, setBudget] = useState(null);
   const [flavors, setFlavors] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const toggleFlavor = (flavor) => {
-    if (flavors.includes(flavor)) {
-      setFlavors(flavors.filter(f => f !== flavor));
+  // Constants
+  const BUDGET_OPTIONS = [2000, 4000, 7000];
+  const FLAVOR_OPTIONS = [
+    { id: 'dark', label: 'شوكولاتة سوداء (Dark)' },
+    { id: 'milk', label: 'شوكولاتة بالحليب (Milk)' },
+    { id: 'nuts', label: 'مكسرات (Nuts)' },
+    { id: 'caramel', label: 'كراميل (Caramel)' },
+  ];
+
+  const toggleFlavor = (flavorLabel) => {
+    if (flavors.includes(flavorLabel)) {
+      setFlavors(flavors.filter(f => f !== flavorLabel));
     } else {
-      setFlavors([...flavors, flavor]);
+      setFlavors([...flavors, flavorLabel]);
     }
   };
 
   const handleOrder = async () => {
-    if (!budget && flavors.length === 0) {
-      alert('الرجاء اختيار الميزانية أو النكهات أولاً!');
+    if (!budget) {
+      alert('الرجاء اختيار الميزانية أولاً!');
+      return;
+    }
+    if (flavors.length === 0) {
+      alert('الرجاء اختيار نكهة واحدة على الأقل!');
       return;
     }
 
@@ -29,7 +42,7 @@ const CustomBoxBuilder = () => {
       productName: `Custom Box (${budget} DZD)`,
     };
 
-    // 1. Try to save to backend (Best Effort)
+    // 1. Save to Backend (Best Effort)
     try {
       await fetch('http://localhost:5000/api/orders', {
         method: 'POST',
@@ -37,24 +50,20 @@ const CustomBoxBuilder = () => {
         body: JSON.stringify(orderData),
       });
     } catch (error) {
-      console.error('Backend sync failed, proceeding to WhatsApp...', error);
+      console.error('Backend sync failed', error);
     }
 
-    // 2. Construct WhatsApp Message
+    // 2. Redirect to WhatsApp
     const phone = "213664021599";
-    let message = `مرحباً، أريد طلب بوكس شوكولاتة مخصص.`;
+    const flavorString = flavors.join(' + ');
+    const text = `مرحباً، أريد طلب بوكس مخصص.\nالميزانية: ${budget} دج.\nالنكهات: ${flavorString}`;
     
-    if (budget) message += `\n💰 الميزانية: ${budget} دج`;
-    else message += `\n💰 الميزانية: (لم تحدد بعد)`;
-    
-    if (flavors.length > 0) message += `\n🍫 النكهات المفضلة: ${flavors.join('، ')}`;
-    else message += `\n🍫 النكهات المفضلة: (لم تحدد بعد)`;
-
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
+    // Explicitly using the user's requested format logic
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
 
     setLoading(false);
-    window.open(whatsappUrl, '_blank');
+    // Redirect immediately
+    window.location.href = whatsappUrl;
   };
 
   return (
@@ -69,108 +78,85 @@ const CustomBoxBuilder = () => {
             صمم بوكس السعادة 🎁
           </h3>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            اختر ميزانيتك ونكهاتك المفضلة، لنقوم بتجهيز بوكس يليق بك وبأحبائك.
+            اختر ميزانيتك ونكهاتك المفضلة، لنقوم بتجهيز بوكس يليق بك.
           </p>
         </div>
 
-        <div className="bg-[#140d0b] border border-brand-gold/20 rounded-3xl p-6 md:p-12 shadow-2xl relative overflow-hidden backdrop-blur-xl">
+        <div className="bg-[#140d0b] border border-brand-gold/20 rounded-3xl p-6 md:p-12 shadow-2xl backdrop-blur-xl">
           
-          {/* Decorative Elements */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-brand-gold/5 blur-[80px] rounded-full pointer-events-none"></div>
-          
-          <div className="grid md:grid-cols-2 gap-12">
-            
-            {/* Step 1: Budget */}
-            <div className="space-y-6">
-              <h4 className="flex items-center gap-3 text-xl font-bold text-brand-cream">
-                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-brand-gold text-brand-dark font-bold text-sm">1</span>
-                اختر الميزانية:
-              </h4>
-              <div className="grid grid-cols-1 gap-4">
-                {[2000, 4000, '7000+'].map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => setBudget(opt)}
-                    className={`relative group p-4 rounded-xl border transition-all duration-300 flex items-center justify-between
-                      ${budget === opt 
-                        ? 'border-brand-gold bg-brand-gold/10 text-brand-gold' 
-                        : 'border-white/10 bg-white/5 text-gray-400 hover:border-brand-gold/50 hover:text-brand-cream'
-                      }`}
-                  >
-                    <span className="text-lg font-medium">{opt} دج</span>
-                    {budget === opt && <Check className="w-5 h-5 text-brand-gold" />}
-                    <div className="absolute inset-0 rounded-xl bg-brand-gold/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Step 2: Flavors */}
-            <div className="space-y-6">
-              <h4 className="flex items-center gap-3 text-xl font-bold text-brand-cream">
-                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-brand-gold text-brand-dark font-bold text-sm">2</span>
-                اختر النكهات:
-              </h4>
-              <div className="grid grid-cols-2 gap-4">
-                {['شوكولاتة داكنة', 'شوكولاتة بالحليب', 'مكسرات', 'كراميل'].map((flavor) => (
-                  <button
-                    key={flavor}
-                    onClick={() => toggleFlavor(flavor)}
-                    className={`relative p-4 rounded-xl border transition-all duration-300 flex flex-col items-center justify-center gap-2 text-center h-32
-                      ${flavors.includes(flavor)
-                        ? 'border-brand-gold bg-brand-gold/10 text-brand-gold scale-105 shadow-lg shadow-brand-gold/10' 
-                        : 'border-white/10 bg-white/5 text-gray-400 hover:border-brand-gold/50 hover:text-brand-cream'
-                      }`}
-                  >
-                    <span className="text-2xl">{getFlavorIcon(flavor)}</span>
-                    <span className="font-medium">{flavor}</span>
-                  </button>
-                ))}
-              </div>
+          {/* Step 1: Budget */}
+          <div className="mb-12">
+            <h4 className="text-brand-cream text-xl font-bold mb-6 flex items-center gap-3">
+              <span className="bg-brand-gold text-brand-dark w-8 h-8 rounded-full flex items-center justify-center text-sm">1</span>
+              اختر الميزانية (دج)
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {BUDGET_OPTIONS.map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => setBudget(opt)}
+                  className={`py-4 px-6 rounded-xl border transition-all duration-300 relative overflow-hidden group ${
+                    budget === opt 
+                      ? 'border-brand-gold bg-brand-gold/10 text-brand-gold shadow-[0_0_20px_rgba(191,149,63,0.3)]' 
+                      : 'border-brand-gold/20 text-gray-400 hover:border-brand-gold/50 hover:text-gray-200'
+                  }`}
+                >
+                  <span className="relative z-10 text-2xl font-bold">{opt}</span>
+                  {budget === opt && (
+                    <div className="absolute top-2 left-2 text-brand-gold">
+                      <Check className="w-5 h-5" />
+                    </div>
+                  )}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Action Button */}
-          <div className="mt-12 pt-8 border-t border-white/10 text-center">
+          {/* Step 2: Flavors */}
+          <div className="mb-12">
+            <h4 className="text-brand-cream text-xl font-bold mb-6 flex items-center gap-3">
+              <span className="bg-brand-gold text-brand-dark w-8 h-8 rounded-full flex items-center justify-center text-sm">2</span>
+              اختر النكهات المفضلة
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {FLAVOR_OPTIONS.map((flavor) => (
+                <button
+                  key={flavor.id}
+                  onClick={() => toggleFlavor(flavor.label)}
+                  className={`py-3 px-4 rounded-xl border transition-all duration-300 text-sm md:text-base ${
+                    flavors.includes(flavor.label)
+                      ? 'border-brand-gold bg-brand-gold/10 text-brand-gold shadow-md'
+                      : 'border-brand-gold/20 text-gray-400 hover:border-brand-gold/50'
+                  }`}
+                >
+                  {flavor.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Action */}
+          <div className="text-center">
             <button
               onClick={handleOrder}
               disabled={loading}
-              className={`
-                inline-flex items-center justify-center gap-3 w-full md:w-auto px-8 py-4 rounded-full text-lg font-bold text-white shadow-lg transition-all duration-300
-                ${loading ? 'bg-gray-600 cursor-not-allowed' : 'bg-[#25D366] hover:bg-[#1ebc57] hover:shadow-green-500/30 hover:-translate-y-1'}
-              `}
+              className="w-full md:w-auto min-w-[300px] bg-gradient-to-r from-brand-gold via-brand-gold-light to-brand-gold text-brand-dark font-bold text-xl py-4 px-10 rounded-full shadow-lg hover:shadow-brand-gold/40 transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-6 h-6 animate-spin" />
                   جاري التحضير...
                 </>
               ) : (
-                <>
-                  <Smartphone className="w-6 h-6" />
-                  أكمل الطلب عبر الواتساب
-                </>
+                'طلب البوكس الآن'
               )}
             </button>
-            <p className="mt-4 text-sm text-gray-500">
-              * سيتم تحويلك مباشرة لمحادثة الواتساب لإتمام التفاصيل
-            </p>
           </div>
 
         </div>
       </div>
     </section>
   );
-};
-
-const getFlavorIcon = (flavor) => {
-  switch (flavor) {
-    case 'شوكولاتة داكنة': return '🌑';
-    case 'شوكولاتة بالحليب': return '🥛';
-    case 'مكسرات': return '🌰';
-    case 'كراميل': return '🍯';
-    default: return '🍬';
-  }
 };
 
 export default CustomBoxBuilder;

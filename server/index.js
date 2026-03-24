@@ -22,12 +22,31 @@ mongoose.connect(MONGO_URI, {
 
 // Routes
 
+// GET /api/orders - Fetch all orders (for Admin)
+app.get('/api/orders', async (req, res) => {
+  try {
+    const orders = await Order.find().sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    res.status(500).json({ error: 'Server error fetching orders' });
+  }
+});
+
 // POST /api/orders - Create a new order
 app.post('/api/orders', async (req, res) => {
   try {
-    const { orderType, budget, flavors, productName, customerPhone } = req.body;
+    const { 
+      orderType, 
+      budget, 
+      flavors, 
+      productName, 
+      customerName, 
+      customerPhone, 
+      wilaya, 
+      address 
+    } = req.body;
     
-    // Validate request
     if (!orderType) {
       return res.status(400).json({ error: 'Order type is required' });
     }
@@ -37,8 +56,11 @@ app.post('/api/orders', async (req, res) => {
       budget,
       flavors,
       productName,
-      status: 'Pending',
-      createdAt: new Date()
+      customerName,
+      customerPhone,
+      wilaya,
+      address,
+      status: 'Pending'
     });
 
     await order.save();
@@ -48,6 +70,10 @@ app.post('/api/orders', async (req, res) => {
     console.error('Error creating order:', error);
     res.status(500).json({ error: 'Server error creating order' });
   }
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 });
 
 // GET /api/orders - Fetch all orders (Admin)
