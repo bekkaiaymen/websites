@@ -22,6 +22,11 @@ mongoose.connect(MONGO_URI, {
 
 // Routes
 
+// GET / - Health Check
+app.get('/', (req, res) => {
+  res.send('Ali Baba Chocolate API is running 🍫');
+});
+
 // GET /api/orders - Fetch all orders (for Admin)
 app.get('/api/orders', async (req, res) => {
   try {
