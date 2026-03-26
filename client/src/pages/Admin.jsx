@@ -121,14 +121,6 @@ const Admin = () => {
             </table>
             )}
           </div>
-                        Request Prince Delivery
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
       </div>
     </div>
