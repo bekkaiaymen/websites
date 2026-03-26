@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Truck, Loader2, CheckCircle, Clock } from 'lucide-react';
+import { buildApiUrl } from '../api';
 
 const Admin = () => {
   const [orders, setOrders] = useState([]);
@@ -12,8 +13,7 @@ const Admin = () => {
 
   const fetchOrders = async () => {
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const res = await fetch(`${API_URL}/api/orders`);
+      const res = await fetch(buildApiUrl('/api/orders'));
       if (!res.ok) throw new Error('Failed to fetch orders');
       const data = await res.json();
       setOrders(Array.isArray(data) ? data : []);
