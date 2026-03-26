@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader2, Image } from 'lucide-react';
 import { buildApiUrl } from '../api';
 
 const AdminProducts = () => {
@@ -8,6 +8,8 @@ const AdminProducts = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     nameAr: '',
@@ -15,7 +17,6 @@ const AdminProducts = () => {
     price: '',
     description: '',
     descriptionAr: '',
-    image: '',
     stock: '100',
     isLocal: false,
     isNational: true,
@@ -49,6 +50,20 @@ const AdminProducts = () => {
     }
   };
 
+  // Handle image file selection
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -59,20 +74,35 @@ const AdminProducts = () => {
         ? buildApiUrl(`/api/products/${editingId}`)
         : buildApiUrl('/api/products');
 
+      // Use FormData to handle file uploads
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('nameAr', formData.nameAr);
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('price', formData.price);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('descriptionAr', formData.descriptionAr);
+      formDataToSend.append('stock', formData.stock);
+      formDataToSend.append('isLocal', formData.isLocal);
+      formDataToSend.append('isNational', formData.isNational);
+      formDataToSend.append('premium', formData.premium);
+
+      // Only append image file if a new image was selected
+      if (imageFile) {
+        formDataToSend.append('image', imageFile);
+      }
+
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          price: parseInt(formData.price),
-          stock: parseInt(formData.stock)
-        })
+        body: formDataToSend // Don't set Content-Type header - browser will handle it
       });
 
       if (res.ok) {
         await fetchProducts();
         setShowForm(false);
         setEditingId(null);
+        setImageFile(null);
+        setImagePreview(null);
         setFormData({
           name: '',
           nameAr: '',
@@ -80,7 +110,6 @@ const AdminProducts = () => {
           price: '',
           description: '',
           descriptionAr: '',
-          image: '',
           stock: '100',
           isLocal: false,
           isNational: true,
@@ -89,6 +118,7 @@ const AdminProducts = () => {
       }
     } catch (error) {
       console.error('Error saving product:', error);
+      alert('حدث خطأ أثناء حفظ المنتج. يرجى المحاولة مرة أخرى.');
     } finally {
       setSubmitting(false);
     }
@@ -102,12 +132,13 @@ const AdminProducts = () => {
       price: product.price,
       description: product.description,
       descriptionAr: product.descriptionAr,
-      image: product.image,
       stock: product.stock,
       isLocal: product.isLocal,
       isNational: product.isNational,
       premium: product.premium
     });
+    setImagePreview(product.image); // Show existing image
+    setImageFile(null); // No new file selected yet
     setEditingId(product._id);
     setShowForm(true);
   };
@@ -122,6 +153,25 @@ const AdminProducts = () => {
     }
   };
 
+  const resetForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setImageFile(null);
+    setImagePreview(null);
+    setFormData({
+      name: '',
+      nameAr: '',
+      category: '',
+      price: '',
+      description: '',
+      descriptionAr: '',
+      stock: '100',
+      isLocal: false,
+      isNational: true,
+      premium: false
+    });
+  };
+
   if (loading) return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-brand-gold" /></div>;
 
   return (
@@ -129,23 +179,7 @@ const AdminProducts = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold text-brand-gold">إدارة المنتجات</h2>
         <button
-          onClick={() => {
-            setShowForm(!showForm);
-            setEditingId(null);
-            setFormData({
-              name: '',
-              nameAr: '',
-              category: '',
-              price: '',
-              description: '',
-              descriptionAr: '',
-              image: '',
-              stock: '100',
-              isLocal: false,
-              isNational: true,
-              premium: false
-            });
-          }}
+          onClick={() => resetForm()}
           className="flex items-center gap-2 bg-brand-gold text-brand-dark px-6 py-3 rounded-lg font-bold hover:bg-yellow-500 transition-colors"
         >
           <Plus className="w-5 h-5" />
@@ -154,72 +188,89 @@ const AdminProducts = () => {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-[#1a120f] border border-brand-gold/20 rounded-lg p-6 space-y-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <input
-            type="text"
-            placeholder="اسم المنتج (EN)"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="lg:col-span-1 bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
-            required
-          />
-          <input
-            type="text"
-            placeholder="اسم المنتج (AR)"
-            value={formData.nameAr}
-            onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
-            className="lg:col-span-1 bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
-            required
-          />
-          <select
-            value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            className="lg:col-span-1 bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
-            required
-          >
-            <option value="">اختر فئة</option>
-            {categories.map(cat => (
-              <option key={cat._id} value={cat._id}>{cat.nameAr}</option>
-            ))}
-          </select>
-          <input
-            type="number"
-            placeholder="السعر"
-            value={formData.price}
-            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-            className="lg:col-span-1 bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
-            required
-          />
-          <input
-            type="text"
-            placeholder="الوصف (EN)"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="lg:col-span-1 bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
-          />
-          <input
-            type="text"
-            placeholder="الوصف (AR)"
-            value={formData.descriptionAr}
-            onChange={(e) => setFormData({ ...formData, descriptionAr: e.target.value })}
-            className="lg:col-span-1 bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
-          />
-          <input
-            type="text"
-            placeholder="رابط الصورة"
-            value={formData.image}
-            onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-            className="lg:col-span-2 bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
-          />
-          <input
-            type="number"
-            placeholder="المخزون"
-            value={formData.stock}
-            onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-            className="lg:col-span-1 bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
-          />
-          <div className="lg:col-span-2 flex gap-4">
-            <label className="flex items-center gap-2 text-brand-cream">
+        <form onSubmit={handleSubmit} className="bg-[#1a120f] border border-brand-gold/20 rounded-lg p-6 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <input
+              type="text"
+              placeholder="اسم المنتج (EN)"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
+              required
+            />
+            <input
+              type="text"
+              placeholder="اسم المنتج (AR)"
+              value={formData.nameAr}
+              onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
+              className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
+              required
+            />
+            <select
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
+              required
+            >
+              <option value="">اختر فئة</option>
+              {categories.map(cat => (
+                <option key={cat._id} value={cat._id}>{cat.nameAr}</option>
+              ))}
+            </select>
+            <input
+              type="number"
+              placeholder="السعر"
+              value={formData.price}
+              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
+              required
+            />
+            <input
+              type="text"
+              placeholder="الوصف (EN)"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
+            />
+            <input
+              type="text"
+              placeholder="الوصف (AR)"
+              value={formData.descriptionAr}
+              onChange={(e) => setFormData({ ...formData, descriptionAr: e.target.value })}
+              className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
+            />
+            <input
+              type="number"
+              placeholder="المخزون"
+              value={formData.stock}
+              onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+              className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
+            />
+          </div>
+
+          {/* Image Upload Section */}
+          <div className="space-y-2">
+            <label className="block text-brand-cream font-bold">صورة المنتج</label>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="w-full bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded cursor-pointer file:bg-brand-gold file:text-brand-dark file:border-0 file:rounded file:px-3 file:py-1 file:font-bold file:cursor-pointer"
+                />
+              </div>
+              {imagePreview && (
+                <div className="w-24 h-24 rounded border border-brand-gold/30 overflow-hidden">
+                  <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Checkboxes */}
+          <div className="flex flex-wrap gap-4">
+            <label className="flex items-center gap-2 text-brand-cream cursor-pointer">
               <input
                 type="checkbox"
                 checked={formData.isLocal}
@@ -227,7 +278,7 @@ const AdminProducts = () => {
               />
               توصيل محلي فقط
             </label>
-            <label className="flex items-center gap-2 text-brand-cream">
+            <label className="flex items-center gap-2 text-brand-cream cursor-pointer">
               <input
                 type="checkbox"
                 checked={formData.isNational}
@@ -235,7 +286,7 @@ const AdminProducts = () => {
               />
               توصيل وطني
             </label>
-            <label className="flex items-center gap-2 text-brand-cream">
+            <label className="flex items-center gap-2 text-brand-cream cursor-pointer">
               <input
                 type="checkbox"
                 checked={formData.premium}
@@ -244,18 +295,27 @@ const AdminProducts = () => {
               فاخر
             </label>
           </div>
-          <div className="lg:col-span-2 flex gap-4">
+
+          {/* Submit Buttons */}
+          <div className="flex gap-4">
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 bg-brand-gold text-brand-dark font-bold py-2 rounded hover:bg-yellow-500 disabled:opacity-50"
+              className="flex-1 bg-brand-gold text-brand-dark font-bold py-3 rounded hover:bg-yellow-500 disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {submitting ? 'جاري...' : 'حفظ'}
+              {submitting ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  جاري رفع الصورة والحفظ...
+                </>
+              ) : (
+                'حفظ المنتج'
+              )}
             </button>
             <button
               type="button"
-              onClick={() => setShowForm(false)}
-              className="flex-1 bg-brand-dark border border-brand-gold/20 text-brand-cream font-bold py-2 rounded hover:border-brand-gold"
+              onClick={resetForm}
+              className="flex-1 bg-brand-dark border border-brand-gold/20 text-brand-cream font-bold py-3 rounded hover:border-brand-gold"
             >
               إلغاء
             </button>
@@ -267,12 +327,16 @@ const AdminProducts = () => {
         {products.map(product => (
           <div key={product._id} className="bg-[#1a120f] border border-brand-gold/20 rounded-lg p-4 flex justify-between items-center">
             <div className="flex gap-4 flex-1">
-              {product.image && (
+              {product.image ? (
                 <img 
                   src={product.image} 
                   alt={product.nameAr}
                   className="w-16 h-16 object-cover rounded"
                 />
+              ) : (
+                <div className="w-16 h-16 bg-brand-dark border border-brand-gold/20 rounded flex items-center justify-center">
+                  <Image className="w-8 h-8 text-brand-gold/50" />
+                </div>
               )}
               <div>
                 <h3 className="text-brand-gold font-bold">{product.nameAr}</h3>

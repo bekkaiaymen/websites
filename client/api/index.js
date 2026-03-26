@@ -9,6 +9,9 @@ import { Order } from './models/Order.js';
 import { Category } from './models/Category.js';
 import { Product } from './models/Product.js';
 
+// Import Upload Middleware
+import { upload } from './middleware/upload.js';
+
 // Load env vars
 dotenv.config();
 
@@ -129,28 +132,49 @@ app.get('/api/categories/:id', async (req, res) => {
 });
 
 // POST /api/categories (Admin)
-app.post('/api/categories', async (req, res) => {
+app.post('/api/categories', upload.single('image'), async (req, res) => {
   try {
     const { name, nameAr, icon, color, description } = req.body;
-    const newCategory = new Category({ name, nameAr, icon, color, description, active: true });
+    
+    // Get image URL from Cloudinary (req.file.path contains the secure URL)
+    const imageUrl = req.file ? req.file.path : null;
+    
+    const newCategory = new Category({ 
+      name, 
+      nameAr, 
+      icon, 
+      color, 
+      description,
+      image: imageUrl, // Store Cloudinary URL
+      active: true 
+    });
     const saved = await newCategory.save();
     res.status(201).json(saved);
   } catch (error) {
+    console.error('Error creating category:', error);
     res.status(500).json({ error: 'Failed to create category', details: error.message });
   }
 });
 
 // PUT /api/categories/:id (Admin)
-app.put('/api/categories/:id', async (req, res) => {
+app.put('/api/categories/:id', upload.single('image'), async (req, res) => {
   try {
     const { name, nameAr, icon, color, description, active } = req.body;
+    
+    // Get image URL from Cloudinary if a new image was uploaded
+    const updateData = { name, nameAr, icon, color, description, active };
+    if (req.file) {
+      updateData.image = req.file.path; // Update image with new Cloudinary URL
+    }
+    
     const updated = await Category.findByIdAndUpdate(
       req.params.id,
-      { name, nameAr, icon, color, description, active },
+      updateData,
       { new: true }
     );
     res.json(updated);
   } catch (error) {
+    console.error('Error updating category:', error);
     res.status(500).json({ error: 'Failed to update category', details: error.message });
   }
 });
@@ -202,31 +226,69 @@ app.get('/api/products/:id', async (req, res) => {
 });
 
 // POST /api/products (Admin)
-app.post('/api/products', async (req, res) => {
+app.post('/api/products', upload.single('image'), async (req, res) => {
   try {
-    const { name, nameAr, category, price, description, descriptionAr, image, stock, isLocal, isNational, premium } = req.body;
+    const { name, nameAr, category, price, description, descriptionAr, stock, isLocal, isNational, premium } = req.body;
+    
+    // Get image URL from Cloudinary (req.file.path contains the secure URL)
+    const imageUrl = req.file ? req.file.path : null;
+    
     const newProduct = new Product({ 
-      name, nameAr, category, price, description, descriptionAr, image, stock, isLocal, isNational, premium, active: true 
+      name, 
+      nameAr, 
+      category, 
+      price, 
+      description, 
+      descriptionAr, 
+      image: imageUrl, // Store Cloudinary URL
+      stock, 
+      isLocal: isLocal === 'true' || isLocal === true, 
+      isNational: isNational === 'true' || isNational === true, 
+      premium: premium === 'true' || premium === true,
+      active: true 
     });
     const saved = await newProduct.save();
     const populated = await saved.populate('category');
     res.status(201).json(populated);
   } catch (error) {
+    console.error('Error creating product:', error);
     res.status(500).json({ error: 'Failed to create product', details: error.message });
   }
 });
 
 // PUT /api/products/:id (Admin)
-app.put('/api/products/:id', async (req, res) => {
+app.put('/api/products/:id', upload.single('image'), async (req, res) => {
   try {
-    const { name, nameAr, category, price, description, descriptionAr, image, stock, isLocal, isNational, premium, active } = req.body;
+    const { name, nameAr, category, price, description, descriptionAr, stock, isLocal, isNational, premium, active } = req.body;
+    
+    // Build update data
+    const updateData = { 
+      name, 
+      nameAr, 
+      category, 
+      price, 
+      description, 
+      descriptionAr, 
+      stock, 
+      isLocal: isLocal === 'true' || isLocal === true, 
+      isNational: isNational === 'true' || isNational === true, 
+      premium: premium === 'true' || premium === true,
+      active 
+    };
+    
+    // Add image URL if new image was uploaded
+    if (req.file) {
+      updateData.image = req.file.path; // Update image with new Cloudinary URL
+    }
+    
     const updated = await Product.findByIdAndUpdate(
       req.params.id,
-      { name, nameAr, category, price, description, descriptionAr, image, stock, isLocal, isNational, premium, active },
+      updateData,
       { new: true }
     ).populate('category');
     res.json(updated);
   } catch (error) {
+    console.error('Error updating product:', error);
     res.status(500).json({ error: 'Failed to update product', details: error.message });
   }
 });
