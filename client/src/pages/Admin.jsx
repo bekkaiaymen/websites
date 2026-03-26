@@ -4,6 +4,7 @@ import { Truck, Loader2, CheckCircle, Clock } from 'lucide-react';
 const Admin = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchOrders();
@@ -13,10 +14,12 @@ const Admin = () => {
     try {
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const res = await fetch(`${API_URL}/api/orders`);
+      if (!res.ok) throw new Error('Failed to fetch orders');
       const data = await res.json();
-      setOrders(data);
+      setOrders(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching orders:', error);
+      setError(error.message);
     } finally {
       setLoading(false);
     }
@@ -50,6 +53,18 @@ const Admin = () => {
           </div>
 
           <div className="overflow-x-auto">
+            {error ? (
+               <div className="p-8 text-center text-red-400 border border-red-500/20 bg-red-500/10 rounded-lg m-4">
+                 <p className="font-bold mb-2">تعذر تحميل البيانات</p>
+                 <p className="text-sm opacity-80">{error}</p>
+                 <p className="text-xs mt-4 text-gray-400">تأكد من تشغيل السيرفر (Backend) أو إعداد رابط الـ API بشكل صحيح.</p>
+               </div>
+            ) : orders.length === 0 ? (
+              <div className="p-12 text-center text-gray-400">
+                <p className="text-xl mb-2">📭</p>
+                <p>لا توجد طلبات مسجلة حتى الآن.</p>
+              </div>
+            ) : (
             <table className="w-full text-right">
               <thead className="bg-brand-dark/50 text-gray-400 text-sm uppercase">
                 <tr>
@@ -98,6 +113,14 @@ const Admin = () => {
                         className="flex items-center gap-2 bg-brand-gold hover:bg-yellow-600 text-brand-dark px-3 py-2 rounded-lg text-xs font-bold transition duration-300"
                       >
                         <Truck className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+            </table>
+            )}
+          </div>
                         Request Prince Delivery
                       </button>
                     </td>
