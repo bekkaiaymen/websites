@@ -14,7 +14,7 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB Connection
-const MONGO_URI = process.env.MONGO_URI;
+const MONGO_URI = process.env.MONGO_URI || process.env.MONGO_URL;
 
 // Ensure database connection is reused across invocations if possible (Vercel best practice)
 let isConnected = false;
