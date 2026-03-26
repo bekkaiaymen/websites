@@ -14,8 +14,12 @@ const Admin = () => {
   const fetchOrders = async () => {
     try {
       const res = await fetch(buildApiUrl('/api/orders'));
-      if (!res.ok) throw new Error('Failed to fetch orders');
       const data = await res.json();
+      if (!res.ok) {
+        // If response has error details, use them
+        const errorMsg = data?.details || data?.error || `HTTP ${res.status}: Failed to fetch orders`;
+        throw new Error(errorMsg);
+      }
       setOrders(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching orders:', error);

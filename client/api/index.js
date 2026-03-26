@@ -69,11 +69,22 @@ app.use(async (req, res, next) => {
 // GET /api/orders
 app.get('/api/orders', async (req, res) => {
   try {
+    if (!isConnected) {
+      return res.status(503).json({ 
+        error: 'Database not connected', 
+        details: `MONGO_URI/MONGO_URL variable: ${MONGO_URI ? 'SET' : 'NOT SET'}`,
+        message: 'Make sure MONGO_URI or MONGO_URL environment variable is configured in Vercel settings.'
+      });
+    }
     const orders = await Order.find().sort({ createdAt: -1 });
     res.json(orders);
   } catch (error) {
-    console.error('Error fetching orders:', error);
-    res.status(500).json({ error: 'Server error fetching orders', details: error.message });
+    console.error('Error fetching orders:', error.message, error.stack);
+    res.status(500).json({ 
+      error: 'Server error fetching orders', 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
