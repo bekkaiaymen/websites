@@ -1,7 +1,7 @@
 import React from 'react';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
-import CustomBoxBuilder from '../components/CustomBoxBuilder';
+import AdvancedCustomBoxBuilder from '../components/AdvancedCustomBoxBuilder';
 import Products from '../components/Products';
 import Footer from '../components/Footer';
 
@@ -11,7 +11,7 @@ const Home = () => {
       <Navbar />
       <main className="bg-brand-dark min-h-screen">
         <Hero />
-        <CustomBoxBuilder />
+        <AdvancedCustomBoxBuilder />
         <Products />
       </main>
       <Footer />
