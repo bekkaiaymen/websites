@@ -1,17 +1,15 @@
 // api/index.js
 // This API handles everything under /api for the Vercel deployment of the client folder.
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
+import express from 'express';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import dotenv from 'dotenv';
 
-// Note: In Vercel serverless environment, .env inside client/ works fine or use Vercel env vars.
-require('dotenv').config();
+// Load env vars
+dotenv.config();
 
 const app = express();
 
-
-// If we want CORS support (though same origin on Vercel generally), we can add it.
-// Default allows specific origins. For now, allow all or verify.
 app.use(cors());
 app.use(express.json());
 
@@ -24,6 +22,9 @@ let isConnected = false;
 const connectDB = async () => {
   if (isConnected) return;
   try {
+    if (!MONGO_URI) {
+      throw new Error("MONGO_URI is not defined in environment variables");
+    }
     await mongoose.connect(MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true
@@ -31,12 +32,12 @@ const connectDB = async () => {
     isConnected = true;
     console.log('✅ MongoDB connected');
   } catch (err) {
-    console.log('❌ MongoDB connection error:', err);
+    console.error('❌ MongoDB connection error:', err);
+    throw err; // Re-throw to handle in the route
   }
 };
 
 // Order Schema - Defined inline to avoid module resolution complexity in serverless specific context
-// but could import if structure allows. Inline is safer for a single file function.
 const OrderSchema = new mongoose.Schema({
   orderType: { type: String, enum: ['Custom Box', 'Local Delivery', 'National Delivery'], required: true },
   budget: { type: Number },
@@ -55,8 +56,12 @@ const Order = mongoose.models.Order || mongoose.model('Order', OrderSchema);
 
 // Middleware to ensure DB connection
 app.use(async (req, res, next) => {
-  await connectDB();
-  next();
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    res.status(500).json({ error: 'Database connection failed', details: err.message });
+  }
 });
 
 // Routes
@@ -68,7 +73,7 @@ app.get('/api/orders', async (req, res) => {
     res.json(orders);
   } catch (error) {
     console.error('Error fetching orders:', error);
-    res.status(500).json({ error: 'Server error fetching orders' });
+    res.status(500).json({ error: 'Server error fetching orders', details: error.message });
   }
 });
 
@@ -91,7 +96,7 @@ app.post('/api/orders', async (req, res) => {
     res.status(201).json(savedOrder);
   } catch (error) {
     console.error('Error creating order:', error);
-    res.status(500).json({ error: 'Failed to create order' });
+    res.status(500).json({ error: 'Failed to create order', details: error.message });
   }
 });
 
@@ -100,4 +105,4 @@ app.get('/api', (req, res) => {
   res.send('Ali Baba Chocolate API is running (Client-Side Serverless) 🍫');
 });
 
-module.exports = app;
+export default app;
