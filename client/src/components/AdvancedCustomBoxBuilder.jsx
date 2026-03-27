@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Check, Loader2, Plus, Minus, X } from 'lucide-react';
+import { Package, Check, Loader2, Plus, Minus, X, ChevronRight } from 'lucide-react';
 import { buildApiUrl } from '../api';
 
 const AdvancedCustomBoxBuilder = () => {
