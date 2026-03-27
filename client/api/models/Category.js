@@ -4,6 +4,7 @@ const CategorySchema = new mongoose.Schema({
   name: { type: String, required: true, unique: true },
   nameAr: { type: String, required: true },
   icon: { type: String }, // URL to icon
+  image: { type: String }, // Cloudinary image URL
   color: { type: String, default: '#bf953f' },
   description: { type: String },
   active: { type: Boolean, default: true },

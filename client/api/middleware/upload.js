@@ -1,6 +1,6 @@
 import multer from 'multer';
-import cloudinary from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import cloudinary from '../config/cloudinary.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
