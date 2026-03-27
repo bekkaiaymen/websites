@@ -103,20 +103,46 @@ app.post('/api/orders', async (req, res) => {
 // GET /api/categories
 app.get('/api/categories', async (req, res) => {
   try {
+    if (!isConnected) {
+      return res.status(503).json({ 
+        error: 'Database not connected',
+        message: 'Please add MONGO_URI to Vercel environment variables',
+        details: `MONGO_URI is ${MONGO_URI ? 'SET' : 'NOT SET'}`
+      });
+    }
     const categories = await Category.find({ active: true }).sort({ createdAt: -1 });
     res.json(categories);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch categories', details: error.message });
+    console.error('Error fetching categories:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to fetch categories', 
+      details: error.message,
+      dbConnected: isConnected,
+      mongoUriSet: !!MONGO_URI
+    });
   }
 });
 
 // GET /api/categories/all (Admin - includes inactive)
 app.get('/api/categories/all', async (req, res) => {
   try {
+    if (!isConnected) {
+      return res.status(503).json({ 
+        error: 'Database not connected',
+        message: 'Please add MONGO_URI to Vercel environment variables',
+        details: `MONGO_URI is ${MONGO_URI ? 'SET' : 'NOT SET'}`
+      });
+    }
     const categories = await Category.find().sort({ createdAt: -1 });
     res.json(categories);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch categories', details: error.message });
+    console.error('Error fetching categories:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to fetch categories', 
+      details: error.message,
+      dbConnected: isConnected,
+      mongoUriSet: !!MONGO_URI
+    });
   }
 });
 
@@ -194,23 +220,49 @@ app.delete('/api/categories/:id', async (req, res) => {
 // GET /api/products
 app.get('/api/products', async (req, res) => {
   try {
+    if (!isConnected) {
+      return res.status(503).json({ 
+        error: 'Database not connected',
+        message: 'Please add MONGO_URI to Vercel environment variables',
+        details: `MONGO_URI is ${MONGO_URI ? 'SET' : 'NOT SET'}`
+      });
+    }
     const { category } = req.query;
     const filter = { active: true };
     if (category) filter.category = category;
     const products = await Product.find(filter).populate('category').sort({ createdAt: -1 });
     res.json(products);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch products', details: error.message });
+    console.error('Error fetching products:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to fetch products', 
+      details: error.message,
+      dbConnected: isConnected,
+      mongoUriSet: !!MONGO_URI
+    });
   }
 });
 
 // GET /api/products/all (Admin - includes inactive)
 app.get('/api/products/all', async (req, res) => {
   try {
+    if (!isConnected) {
+      return res.status(503).json({ 
+        error: 'Database not connected',
+        message: 'Please add MONGO_URI to Vercel environment variables',
+        details: `MONGO_URI is ${MONGO_URI ? 'SET' : 'NOT SET'}`
+      });
+    }
     const products = await Product.find().populate('category').sort({ createdAt: -1 });
     res.json(products);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch products', details: error.message });
+    console.error('Error fetching products:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to fetch products', 
+      details: error.message,
+      dbConnected: isConnected,
+      mongoUriSet: !!MONGO_URI
+    });
   }
 });
 
