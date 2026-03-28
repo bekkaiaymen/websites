@@ -24,16 +24,17 @@ app.use(express.json());
 const MONGO_URI = process.env.MONGO_URI || process.env.MONGO_URL;
 
 // Ensure database connection is reused across invocations if possible (Vercel best practice)
-let isConnected = false;
-
 const connectDB = async () => {
-  if (isConnected) return;
+  // If connection is already established or connecting, do nothing
+  if (mongoose.connection.readyState >= 1) return;
   try {
     if (!MONGO_URI) {
       throw new Error("MONGO_URI is not defined in environment variables");
     }
-    await mongoose.connect(MONGO_URI);
-    isConnected = true;
+    // Set settings so mongoose won't buffer commands if it disconnects
+    await mongoose.connect(MONGO_URI, {
+      serverSelectionTimeoutMS: 5000,
+    });
     console.log('✅ MongoDB connected');
   } catch (err) {
     console.error('❌ MongoDB connection error:', err);
@@ -56,7 +57,7 @@ app.use(async (req, res, next) => {
 // GET /api/orders
 app.get('/api/orders', async (req, res) => {
   try {
-    if (!isConnected) {
+    if (mongoose.connection.readyState !== 1) {
       return res.status(503).json({ 
         error: 'Database not connected', 
         details: `MONGO_URI/MONGO_URL variable: ${MONGO_URI ? 'SET' : 'NOT SET'}`,
@@ -103,7 +104,7 @@ app.post('/api/orders', async (req, res) => {
 // GET /api/categories
 app.get('/api/categories', async (req, res) => {
   try {
-    if (!isConnected) {
+    if (mongoose.connection.readyState !== 1) {
       return res.status(503).json({ 
         error: 'Database not connected',
         message: 'Please add MONGO_URI to Vercel environment variables',
@@ -126,7 +127,7 @@ app.get('/api/categories', async (req, res) => {
 // GET /api/categories/all (Admin - includes inactive)
 app.get('/api/categories/all', async (req, res) => {
   try {
-    if (!isConnected) {
+    if (mongoose.connection.readyState !== 1) {
       return res.status(503).json({ 
         error: 'Database not connected',
         message: 'Please add MONGO_URI to Vercel environment variables',
@@ -220,7 +221,7 @@ app.delete('/api/categories/:id', async (req, res) => {
 // GET /api/products
 app.get('/api/products', async (req, res) => {
   try {
-    if (!isConnected) {
+    if (mongoose.connection.readyState !== 1) {
       return res.status(503).json({ 
         error: 'Database not connected',
         message: 'Please add MONGO_URI to Vercel environment variables',
@@ -246,7 +247,7 @@ app.get('/api/products', async (req, res) => {
 // GET /api/products/all (Admin - includes inactive)
 app.get('/api/products/all', async (req, res) => {
   try {
-    if (!isConnected) {
+    if (mongoose.connection.readyState !== 1) {
       return res.status(503).json({ 
         error: 'Database not connected',
         message: 'Please add MONGO_URI to Vercel environment variables',
