@@ -13,3 +13,31 @@ export function buildApiUrl(path) {
   const safePath = path.startsWith('/') ? path : `/${path}`;
   return `${normalizedBaseUrl}${safePath}`;
 }
+
+// ============ CATEGORIES API ============
+export async function getCategories() {
+  try {
+    const response = await fetch(buildApiUrl('/api/categories'));
+    if (!response.ok) throw new Error('Failed to fetch categories');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return [];
+  }
+}
+
+// ============ PRODUCTS API ============
+export async function getProducts(categoryId = null) {
+  try {
+    let url = buildApiUrl('/api/products');
+    if (categoryId) {
+      url += `?category=${categoryId}`;
+    }
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch products');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    return [];
+  }
+}
