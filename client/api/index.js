@@ -118,7 +118,7 @@ app.get('/api/categories', async (req, res) => {
     res.status(500).json({ 
       error: 'Failed to fetch categories', 
       details: error.message,
-      dbConnected: isConnected,
+      dbConnected: mongoose.connection.readyState === 1,
       mongoUriSet: !!MONGO_URI
     });
   }
@@ -238,7 +238,7 @@ app.get('/api/products', async (req, res) => {
     res.status(500).json({ 
       error: 'Failed to fetch products', 
       details: error.message,
-      dbConnected: isConnected,
+      dbConnected: mongoose.connection.readyState === 1,
       mongoUriSet: !!MONGO_URI
     });
   }
@@ -261,7 +261,7 @@ app.get('/api/products/all', async (req, res) => {
     res.status(500).json({ 
       error: 'Failed to fetch products', 
       details: error.message,
-      dbConnected: isConnected,
+      dbConnected: mongoose.connection.readyState === 1,
       mongoUriSet: !!MONGO_URI
     });
   }

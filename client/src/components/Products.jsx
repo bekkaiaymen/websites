@@ -13,9 +13,16 @@ const Products = ({ categoryFilter = null }) => {
   useEffect(() => {
     const fetchProducts = async () => {
       setProductsLoading(true);
-      const data = await getProducts(categoryFilter);
-      setProducts(data);
-      setProductsLoading(false);
+      try {
+        console.log('[Products] Fetching products for category:', categoryFilter);
+        const data = await getProducts(categoryFilter);
+        console.log('[Products] Received products:', data);
+        setProducts(data);
+      } catch (error) {
+        console.error('[Products] Error:', error);
+      } finally {
+        setProductsLoading(false);
+      }
     };
     fetchProducts();
   }, [categoryFilter]);

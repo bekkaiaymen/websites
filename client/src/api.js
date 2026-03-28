@@ -17,11 +17,16 @@ export function buildApiUrl(path) {
 // ============ CATEGORIES API ============
 export async function getCategories() {
   try {
-    const response = await fetch(buildApiUrl('/api/categories'));
-    if (!response.ok) throw new Error('Failed to fetch categories');
-    return await response.json();
+    const url = buildApiUrl('/api/categories');
+    console.log('[DEBUG] Fetching categories from:', url);
+    const response = await fetch(url);
+    const responseText = await response.text();
+    console.log('[DEBUG] Categories response status:', response.status);
+    console.log('[DEBUG] Categories response body:', responseText);
+    if (!response.ok) throw new Error(`HTTP ${response.status}: ${responseText}`);
+    return JSON.parse(responseText);
   } catch (error) {
-    console.error('Error fetching categories:', error);
+    console.error('[ERROR] Failed to fetch categories:', error.message, error);
     return [];
   }
 }
@@ -33,11 +38,15 @@ export async function getProducts(categoryId = null) {
     if (categoryId) {
       url += `?category=${categoryId}`;
     }
+    console.log('[DEBUG] Fetching products from:', url);
     const response = await fetch(url);
-    if (!response.ok) throw new Error('Failed to fetch products');
-    return await response.json();
+    const responseText = await response.text();
+    console.log('[DEBUG] Products response status:', response.status);
+    console.log('[DEBUG] Products response body:', responseText);
+    if (!response.ok) throw new Error(`HTTP ${response.status}: ${responseText}`);
+    return JSON.parse(responseText);
   } catch (error) {
-    console.error('Error fetching products:', error);
+    console.error('[ERROR] Failed to fetch products:', error.message, error);
     return [];
   }
 }

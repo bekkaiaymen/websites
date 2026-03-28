@@ -10,7 +10,7 @@ const AdvancedCustomBoxBuilder = ({ categoryFilter = null }) => {
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState(categoryFilter);
+  const [localCategoryFilter, setLocalCategoryFilter] = useState(null); // Local filter inside builder
   const [productsLoading, setProductsLoading] = useState(false);
 
   // Fetch categories and products
@@ -18,16 +18,15 @@ const AdvancedCustomBoxBuilder = ({ categoryFilter = null }) => {
     const fetchData = async () => {
       try {
         const catsData = await getCategories();
-        const prodsData = await getProducts(categoryFilter);
+        const prodsData = await getProducts(categoryFilter || localCategoryFilter);
         setCategories(catsData);
         setProducts(prodsData);
-        setSelectedCategory(categoryFilter);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
     };
     fetchData();
-  }, [categoryFilter]);
+  }, [categoryFilter, localCategoryFilter]);
 
   const handleBudgetSubmit = (e) => {
     e.preventDefault();
@@ -38,8 +37,9 @@ const AdvancedCustomBoxBuilder = ({ categoryFilter = null }) => {
     setStep(2);
   };
 
-  const filteredProducts = selectedCategory 
-    ? products.filter(p => p.category?._id === selectedCategory)
+  const activeCategory = categoryFilter || localCategoryFilter;
+  const filteredProducts = activeCategory 
+    ? products.filter(p => p.category?._id === activeCategory)
     : products;
 
   const calculateTotal = () => {
@@ -156,7 +156,7 @@ ${itemSummary}
         </div>
 
         {/* Main Content */}
-        <div className="bg-gradient-to-br from-[#1a120f] to-[#140d0b] border border-brand-gold/20 rounded-2xl md:rounded-3xl p-6 md:p-8 lg:p-12 shadow-2xl backdrop-blur-xl mx-4 md:mx-0"
+        <div className="bg-gradient-to-br from-[#1a120f] to-[#140d0b] border border-brand-gold/20 rounded-2xl md:rounded-3xl p-6 md:p-8 lg:p-12 shadow-2xl backdrop-blur-xl mx-4 md:mx-0">
           
           {/* STEP 1: Budget Selection */}
           {step === 1 && (

@@ -8,9 +8,16 @@ const HomeCategoriesSection = ({ onCategorySelect }) => {
 
   useEffect(() => {
     const fetchCategories = async () => {
-      const data = await getCategories();
-      setCategories(data);
-      setLoading(false);
+      try {
+        console.log('[HomeCategoriesSection] Fetching categories...');
+        const data = await getCategories();
+        console.log('[HomeCategoriesSection] Received categories:', data);
+        setCategories(data);
+      } catch (error) {
+        console.error('[HomeCategoriesSection] Error:', error);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchCategories();
   }, []);
@@ -23,8 +30,18 @@ const HomeCategoriesSection = ({ onCategorySelect }) => {
     }
   };
 
-  if (loading || categories.length === 0) {
-    return null;
+  if (loading) {
+    return (
+      <section className="py-12 px-4 bg-brand-dark border-t border-b border-brand-gold/20">
+        <div className="max-w-7xl mx-auto text-center">
+          <p className="text-brand-cream">جاري تحميل الفئات...</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (categories.length === 0) {
+    return null; // Only hide if truly no categories exist
   }
 
   return (
