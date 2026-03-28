@@ -179,7 +179,24 @@ const AdminProducts = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold text-brand-gold">إدارة المنتجات</h2>
         <button
-          onClick={() => resetForm()}
+          onClick={() => {
+            setFormData({
+              name: '',
+              nameAr: '',
+              category: '',
+              price: '',
+              description: '',
+              descriptionAr: '',
+              stock: '100',
+              isLocal: false,
+              isNational: true,
+              premium: false
+            });
+            setEditingId(null);
+            setImageFile(null);
+            setImagePreview(null);
+            setShowForm(true);
+          }}
           className="flex items-center gap-2 bg-brand-gold text-brand-dark px-6 py-3 rounded-lg font-bold hover:bg-yellow-500 transition-colors"
         >
           <Plus className="w-5 h-5" />
