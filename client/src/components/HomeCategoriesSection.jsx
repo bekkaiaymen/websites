@@ -41,7 +41,7 @@ const HomeCategoriesSection = ({ onCategorySelect }) => {
   }
 
   if (categories.length === 0) {
-    return null; // Only hide if truly no categories exist
+    return null;
   }
 
   return (
@@ -56,21 +56,29 @@ const HomeCategoriesSection = ({ onCategorySelect }) => {
             <button
               key={category._id}
               onClick={() => handleCategorySelect(category._id)}
-              className={\
+              className={`
                 relative flex flex-col items-center justify-center
                 w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden
                 transition-all duration-300 transform hover:scale-110
-                \
+                ${
+                  selectedCategory === category._id
+                    ? 'ring-4 ring-brand-gold shadow-lg shadow-brand-gold/50 scale-105'
+                    : 'border-2 border-brand-gold/30 hover:border-brand-gold/60'
+                }
                 text-center group p-0
-              \}
+              `}
             >
               {category.image ? (
                 <>
-                  <img src={category.image} alt={category.nameAr || category.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                  <div className={\bsolute inset-0 transition-colors duration-300 \\}></div>
+                  <img 
+                    src={category.image} 
+                    alt={category.nameAr || category.name} 
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                  />
+                  <div className={`absolute inset-0 transition-colors duration-300 ${selectedCategory === category._id ? 'bg-black/30' : 'bg-black/50 group-hover:bg-black/40'}`}></div>
                 </>
               ) : (
-                <div className={\bsolute inset-0 \\}></div>
+                <div className={`absolute inset-0 ${selectedCategory === category._id ? 'bg-brand-gold' : 'bg-brand-gold/10'}`}></div>
               )}
               
               {!category.image && (
@@ -80,10 +88,14 @@ const HomeCategoriesSection = ({ onCategorySelect }) => {
               )}
               
               <p
-                className={\
+                className={`
                   relative z-10 text-xs md:text-sm font-bold truncate px-2 w-full
-                  \
-                \}
+                  ${
+                    selectedCategory === category._id && !category.image
+                      ? 'text-brand-dark'
+                      : 'text-brand-cream group-hover:text-brand-gold'
+                  }
+                `}
                 style={{ textShadow: category.image ? '0px 2px 4px rgba(0,0,0,0.8)' : 'none' }}
               >
                 {category.nameAr || category.name}
