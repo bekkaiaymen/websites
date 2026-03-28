@@ -153,6 +153,7 @@ const Products = ({ categoryFilter = null }) => {
             )}
           </>
         )}
+      </div>
 
       {/* Modal for National Orders */}
       {selectedProduct && (
