@@ -1,20 +1,20 @@
-import React from 'react';
+﻿import React from 'react';
 import { ChevronDown, Sparkles } from 'lucide-react';
 
 const Hero = () => {
   return (
-    <div className="relative min-h-[80vh] md:min-h-[90vh] flex flex-col items-center justify-center text-center px-4 overflow-hidden pt-12 md:pt-20">
+    <div className="relative min-h-[60vh] md:min-h-[70vh] flex flex-col items-center justify-center text-center px-4 overflow-hidden pt-12 md:pt-20 pb-12">
       
       {/* Background Image with Dark Overlay */}
       <div className="absolute inset-0 z-0">
         <img 
           src="/hero-bg.jpg" 
           alt="Luxury Gifts & Chocolate" 
-          className="w-full h-full object-cover opacity-30" 
+          className="w-full h-full object-cover object-center opacity-40 md:opacity-50" 
           onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1606313564200-e75d5e30476d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80'; }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-brand-dark/80 to-transparent"></div>
-        <div className="absolute inset-0 bg-brand-dark/40 mix-blend-multiply"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-brand-dark/70 to-brand-dark/20"></div>
+        <div className="absolute inset-0 bg-brand-dark/20 mix-blend-multiply"></div>
       </div>
 
       {/* Decorative Glows */}
@@ -41,7 +41,7 @@ const Hero = () => {
         </h2>
 
         <p className="text-xs md:text-base lg:text-lg text-gray-300 font-light max-w-2xl mx-auto leading-relaxed mt-3 md:mt-6 px-2">
-          وجهتك الأولى لأرقى الهدايا الفاخرة والشوكولاتة البلجيكية، والعطور الفاخرة، والمنتجات التقليدية الجزائرية. كل هدية معدّة بعناية خاصة لتجعل لحظاتكم لا تُنسى.
+          وجهتك الأولى لأرقى الهدايا الفاخرة. كل هدية معدّة بعناية خاصة لتجعل لحظاتكم لا تُنسى.
         </p>
 
         <div className="pt-6 md:pt-10 flex flex-col sm:flex-row gap-3 md:gap-4 justify-center items-center">
@@ -65,7 +65,7 @@ const Hero = () => {
       </div>
 
       {/* Scroll Down Indicator */}
-      <div className="absolute bottom-6 md:bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+      <div className="absolute bottom-6 md:bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce mt-8">
         <ChevronDown className="w-6 h-6 md:w-8 md:h-8 text-brand-gold/50" />
       </div>
     </div>

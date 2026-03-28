@@ -20,7 +20,7 @@ const AdvancedCustomBoxBuilder = ({ categoryFilter = null, preselectedProduct, c
       const pid = preselectedProduct._id || preselectedProduct.id;
       setSelectedItems({ [pid]: 1 });
       setBudget(prev => Math.max(prev || 0, preselectedProduct.price || 0));
-      setStep(1); // Ensure they start at budget
+      setStep(2); // Jump straight to products
     }
   }, [preselectedProduct]);
 
@@ -217,9 +217,19 @@ ${notes || 'لا يوجد'}
               {/* Sticky Calculator Bar */}
               <div className="sticky top-0 z-50 -mx-6 md:-mx-8 lg:-mx-12 mb-6 md:mb-8 p-4 md:p-6 lg:p-8 bg-gradient-to-r from-brand-gold/20 via-brand-gold/10 to-brand-gold/20 border-b-2 border-brand-gold/50 backdrop-blur-xl rounded-b-2xl md:rounded-b-3xl shadow-2xl">
                 <div className="flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4 text-center md:text-right">
-                  <div className="space-y-1 md:space-y-2">
+                  <div className="space-y-1 md:space-y-2 flex flex-col items-center md:items-start">
                     <p className="text-xs md:text-sm text-gray-400">الميزانية المحددة</p>
-                    <p className="text-xl md:text-3xl font-bold text-brand-gold">{budget.toLocaleString()} دج</p>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="number" 
+                        min="0" 
+                        step="100" 
+                        value={budget || ''} 
+                        onChange={(e) => setBudget(parseInt(e.target.value) || 0)}
+                        className="w-24 md:w-32 bg-[#1a120f]/80 border-2 border-brand-gold/50 rounded p-1 text-center text-xl md:text-2xl font-bold text-brand-gold focus:outline-none focus:border-brand-gold transition-colors"
+                      />
+                      <span className="text-sm md:text-base text-brand-gold font-bold">دج</span>
+                    </div>
                   </div>
                   <div className="h-8 w-px bg-brand-gold/30 hidden md:block"></div>
                   <div className="space-y-1 md:space-y-2">

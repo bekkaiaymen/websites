@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { getCategories } from '../api';
 
 const HomeCategoriesSection = ({ onCategorySelect }) => {
@@ -56,30 +56,35 @@ const HomeCategoriesSection = ({ onCategorySelect }) => {
             <button
               key={category._id}
               onClick={() => handleCategorySelect(category._id)}
-              className={`
-                flex flex-col items-center justify-center
-                w-24 h-24 md:w-28 md:h-28 rounded-full
+              className={\
+                relative flex flex-col items-center justify-center
+                w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden
                 transition-all duration-300 transform hover:scale-110
-                ${
-                  selectedCategory === category._id
-                    ? 'bg-brand-gold shadow-lg shadow-brand-gold/50 scale-105'
-                    : 'bg-brand-gold/10 border-2 border-brand-gold/30 hover:border-brand-gold/60'
-                }
-                text-center group
-              `}
+                \
+                text-center group p-0
+              \}
             >
-              <div className="text-4xl md:text-5xl mb-2">
-                {category.icon || '🎁'}
-              </div>
+              {category.image ? (
+                <>
+                  <img src={category.image} alt={category.nameAr || category.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                  <div className={\bsolute inset-0 transition-colors duration-300 \\}></div>
+                </>
+              ) : (
+                <div className={\bsolute inset-0 \\}></div>
+              )}
+              
+              {!category.image && (
+                <div className="relative z-10 text-3xl md:text-4xl mb-1">
+                  {category.icon || '🎁'}
+                </div>
+              )}
+              
               <p
-                className={`
-                  text-xs md:text-sm font-bold truncate px-2
-                  ${
-                    selectedCategory === category._id
-                      ? 'text-brand-dark'
-                      : 'text-brand-cream group-hover:text-brand-gold'
-                  }
-                `}
+                className={\
+                  relative z-10 text-xs md:text-sm font-bold truncate px-2 w-full
+                  \
+                \}
+                style={{ textShadow: category.image ? '0px 2px 4px rgba(0,0,0,0.8)' : 'none' }}
               >
                 {category.nameAr || category.name}
               </p>
