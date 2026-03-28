@@ -33,7 +33,7 @@ const authenticateToken = (req, res, next) => {
 };
 
 // MongoDB Connection
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/alibaba_chocolate';
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/alibaba_chocolate';
 
 mongoose.connect(MONGO_URI, {
   useNewUrlParser: true,
