@@ -5,6 +5,7 @@ const ProductSchema = new mongoose.Schema({
   nameAr: { type: String, required: true },
   category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
   price: { type: Number, required: true },
+  cost: { type: Number, default: 0 }, // سعر الشراء للحساب الأرباح
   description: { type: String },
   descriptionAr: { type: String },
   image: { type: String },

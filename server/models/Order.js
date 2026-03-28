@@ -33,8 +33,19 @@ const OrderSchema = new mongoose.Schema({
   // System Fields
   status: {
     type: String,
-    enum: ['Pending', 'Confirmed', 'Delivered', 'Cancelled'],
+    enum: ['Pending', 'Confirmed', 'Delivered', 'Returned', 'Cancelled'],
     default: 'Pending'
+  },
+  total: {
+    type: Number,
+    default: 0
+  },
+  deliveryCost: {
+    type: Number,
+    default: 0
+  },
+  notes: {
+    type: String
   },
   createdAt: {
     type: Date,

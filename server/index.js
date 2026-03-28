@@ -1,9 +1,12 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 const Order = require('./models/Order');
 const Category = require('./models/Category');
 const Product = require('./models/Product');
+const Admin = require('./models/Admin');
+const Expense = require('./models/Expense');
 
 require('dotenv').config();
 
@@ -12,6 +15,22 @@ const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
+
+// Authentication Middleware
+const authenticateToken = (req, res, next) => {
+  const token = req.headers['authorization']?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'alibaba_secret_key_2024');
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(403).json({ error: 'Invalid or expired token' });
+  }
+};
 
 // MongoDB Connection
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/alibaba_chocolate';
@@ -51,11 +70,20 @@ app.post('/api/orders', async (req, res) => {
       customerName, 
       customerPhone, 
       wilaya, 
-      address 
+      address,
+      total,
+      notes
     } = req.body;
     
     if (!orderType) {
       return res.status(400).json({ error: 'Order type is required' });
+    }
+
+    // Validate minimum budget for Custom Box
+    if (orderType === 'Custom Box' && budget && budget < 800) {
+      return res.status(400).json({ 
+        error: 'الحد الأدنى للميزانية هو 800 دينار جزائري' 
+      });
     }
 
     const order = new Order({
@@ -67,6 +95,8 @@ app.post('/api/orders', async (req, res) => {
       customerPhone,
       wilaya,
       address,
+      total: total || budget || 0,
+      notes,
       status: 'Pending'
     });
 
@@ -267,6 +297,7 @@ app.put('/api/products/:id', async (req, res) => {
       nameAr,
       category,
       price,
+      cost,
       description,
       descriptionAr,
       image,
@@ -284,6 +315,7 @@ app.put('/api/products/:id', async (req, res) => {
         nameAr,
         category,
         price,
+        cost,
         description,
         descriptionAr,
         image,
@@ -323,6 +355,195 @@ app.delete('/api/products/:id', async (req, res) => {
   } catch (error) {
     console.error('Error deleting product:', error);
     res.status(500).json({ error: 'Server error deleting product' });
+  }
+});
+
+// ============ ADMIN AUTHENTICATION ENDPOINTS ============
+
+// POST /api/admin/login - Admin login
+app.post('/api/admin/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password required' });
+    }
+
+    const admin = await Admin.findOne({ username, active: true });
+    
+    if (!admin || admin.password !== password) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign(
+      { id: admin._id, username: admin.username, role: admin.role },
+      process.env.JWT_SECRET || 'alibaba_secret_key_2024',
+      { expiresIn: '24h' }
+    );
+
+    res.json({ 
+      token, 
+      admin: { 
+        id: admin._id, 
+        username: admin.username, 
+        role: admin.role 
+      } 
+    });
+  } catch (error) {
+    console.error('Error logging in:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ============ ADMIN-ONLY ORDER ENDPOINTS ============
+
+// GET /api/admin/orders - Get all orders with profit calculations
+app.get('/api/admin/orders', authenticateToken, async (req, res) => {
+  try {
+    const orders = await Order.find().sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    res.status(500).json({ error: 'Server error fetching orders' });
+  }
+});
+
+// PUT /api/admin/orders/:id/status - Update order status
+app.put('/api/admin/orders/:id/status', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, deliveryCost } = req.body;
+
+    if (!['Pending', 'Confirmed', 'Delivered', 'Returned', 'Cancelled'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const order = await Order.findByIdAndUpdate(
+      id,
+      { status, deliveryCost: deliveryCost || 0 },
+      { new: true }
+    );
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    res.json(order);
+  } catch (error) {
+    console.error('Error updating order:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ============ PROFIT ANALYTICS ENDPOINTS ============
+
+// GET /api/admin/analytics/profit - Get profit data for a date range
+app.get('/api/admin/analytics/profit', authenticateToken, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const end = endDate ? new Date(endDate) : new Date();
+
+    const orders = await Order.find({
+      createdAt: { $gte: start, $lte: end }
+    });
+
+    const expenses = await Expense.find({
+      date: { $gte: start, $lte: end }
+    });
+
+    let revenue = 0;
+    let costs = 0;
+    let losses = 0;
+
+    orders.forEach(order => {
+      if (order.status === 'Delivered') {
+        revenue += order.total || 0;
+      } else if (order.status === 'Returned') {
+        // When returned, lose half the delivery cost
+        losses += (order.deliveryCost || 0) * 0.5;
+      }
+    });
+
+    let totalExpenses = 0;
+    expenses.forEach(expense => {
+      totalExpenses += expense.amount;
+    });
+
+    const profit = revenue - costs - losses - totalExpenses;
+
+    res.json({
+      revenue,
+      costs,
+      losses,
+      expenses: totalExpenses,
+      profit,
+      orderCount: orders.length,
+      deliveredCount: orders.filter(o => o.status === 'Delivered').length,
+      returnedCount: orders.filter(o => o.status === 'Returned').length,
+      period: { start, end }
+    });
+  } catch (error) {
+    console.error('Error calculating profit:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ============ EXPENSES ENDPOINTS ============
+
+// GET /api/admin/expenses - Get all expenses
+app.get('/api/admin/expenses', authenticateToken, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const filter = {};
+
+    if (startDate || endDate) {
+      filter.date = {};
+      if (startDate) filter.date.$gte = new Date(startDate);
+      if (endDate) filter.date.$lte = new Date(endDate);
+    }
+
+    const expenses = await Expense.find(filter).sort({ date: -1 });
+    res.json(expenses);
+  } catch (error) {
+    console.error('Error fetching expenses:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/admin/expenses - Create a new expense
+app.post('/api/admin/expenses', authenticateToken, async (req, res) => {
+  try {
+    const { date, type, description, amount } = req.body;
+
+    if (!date || !type || !description || !amount) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    const expense = new Expense({
+      date: new Date(date),
+      type,
+      description,
+      amount
+    });
+
+    await expense.save();
+    res.status(201).json(expense);
+  } catch (error) {
+    console.error('Error creating expense:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// DELETE /api/admin/expenses/:id - Delete an expense
+app.delete('/api/admin/expenses/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await Expense.findByIdAndDelete(id);
+    res.json({ message: 'Expense deleted' });
+  } catch (error) {
+    console.error('Error deleting expense:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 

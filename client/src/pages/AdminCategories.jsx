@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Loader2, Image } from 'lucide-react';
-import { buildApiUrl } from '../api';
+import { useNavigate } from 'react-router-dom';
+import AdminNavbar from '../components/AdminNavbar';
 
 const AdminCategories = () => {
   const [categories, setCategories] = useState([]);
@@ -17,6 +18,7 @@ const AdminCategories = () => {
     color: '#D4AF37'
   });
   const [submitting, setSubmitting] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchCategories();
@@ -24,7 +26,8 @@ const AdminCategories = () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch(buildApiUrl('/api/categories/all'));
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const res = await fetch(`${API_URL}/api/categories`);
       const data = await res.json();
       setCategories(data);
     } catch (error) {
@@ -54,9 +57,10 @@ const AdminCategories = () => {
     
     try {
       const method = editingId ? 'PUT' : 'POST';
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const url = editingId 
-        ? buildApiUrl(`/api/categories/${editingId}`)
-        : buildApiUrl('/api/categories');
+        ? `${API_URL}/api/categories/${editingId}`
+        : `${API_URL}/api/categories`;
 
       // Use FormData to handle file uploads
       const formDataToSend = new FormData();
@@ -109,7 +113,8 @@ const AdminCategories = () => {
   const handleDelete = async (id) => {
     if (!confirm('هل أنت متأكد من الحذف؟')) return;
     try {
-      await fetch(buildApiUrl(`/api/categories/${id}`), { method: 'DELETE' });
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      await fetch(`${API_URL}/api/categories/${id}`, { method: 'DELETE' });
       await fetchCategories();
     } catch (error) {
       console.error('Error deleting category:', error);
@@ -124,151 +129,167 @@ const AdminCategories = () => {
     setFormData({ name: '', nameAr: '', icon: '', description: '', color: '#D4AF37' });
   };
 
-  if (loading) return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-brand-gold" /></div>;
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
+    navigate('/admin/login');
+  };
+
+  if (loading) return (
+    <div className="min-h-screen bg-gradient-to-br from-brand-dark to-[#0f0a08]">
+      <AdminNavbar onLogout={handleLogout} />
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-gold" />
+      </div>
+    </div>
+  );
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold text-brand-gold">إدارة الفئات</h2>
-        <button
-          onClick={() => {
-            setFormData({ name: '', nameAr: '', icon: '', description: '', color: '#D4AF37' });
-            setEditingId(null);
-            setImageFile(null);
-            setImagePreview(null);
-            setShowForm(true);
-          }}
-          className="flex items-center gap-2 bg-brand-gold text-brand-dark px-6 py-3 rounded-lg font-bold hover:bg-yellow-500 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          إضافة فئة
-        </button>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-brand-dark to-[#0f0a08]">
+      <AdminNavbar onLogout={handleLogout} />
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-4xl font-bold text-brand-cream">إدارة الفئات</h1>
+          <button
+            onClick={() => {
+              setFormData({ name: '', nameAr: '', icon: '', description: '', color: '#D4AF37' });
+              setEditingId(null);
+              setImageFile(null);
+              setImagePreview(null);
+              setShowForm(true);
+            }}
+            className="flex items-center gap-2 bg-brand-gold text-brand-dark px-6 py-3 rounded-lg font-bold hover:bg-yellow-500 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            إضافة فئة
+          </button>
+        </div>
 
-      {showForm && (
-        <form onSubmit={handleSubmit} className="bg-[#1a120f] border border-brand-gold/20 rounded-lg p-6 space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <input
-              type="text"
-              placeholder="اسم الفئة (EN)"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
-              required
-            />
-            <input
-              type="text"
-              placeholder="اسم الفئة (AR)"
-              value={formData.nameAr}
-              onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
-              className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
-              required
-            />
-            <input
-              type="text"
-              placeholder="أيقونة (emoji أو نص)"
-              value={formData.icon}
-              onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-              className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
-            />
-            <input
-              type="color"
-              value={formData.color}
-              onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-              className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded cursor-pointer"
-            />
-          </div>
+        {showForm && (
+          <form onSubmit={handleSubmit} className="bg-[#1a120f] border border-brand-gold/20 rounded-lg p-6 space-y-6 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <input
+                type="text"
+                placeholder="اسم الفئة (EN)"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
+                required
+              />
+              <input
+                type="text"
+                placeholder="اسم الفئة (AR)"
+                value={formData.nameAr}
+                onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
+                className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
+                required
+              />
+              <input
+                type="text"
+                placeholder="أيقونة (emoji أو نص)"
+                value={formData.icon}
+                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
+              />
+              <input
+                type="color"
+                value={formData.color}
+                onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded cursor-pointer"
+              />
+            </div>
 
-          <textarea
-            placeholder="الوصف"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="w-full bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded h-20"
-          />
+            <textarea
+              placeholder="الوصف"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded h-20"
+            />
 
-          {/* Image Upload Section */}
-          <div className="space-y-2">
-            <label className="block text-brand-cream font-bold">صورة الفئة</label>
+            {/* Image Upload Section */}
+            <div className="space-y-2">
+              <label className="block text-brand-cream font-bold">صورة الفئة</label>
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="w-full bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded cursor-pointer file:bg-brand-gold file:text-brand-dark file:border-0 file:rounded file:px-3 file:py-1 file:font-bold file:cursor-pointer"
+                  />
+                </div>
+                {imagePreview && (
+                  <div className="w-24 h-24 rounded border border-brand-gold/30 overflow-hidden">
+                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Submit Buttons */}
             <div className="flex gap-4">
-              <div className="flex-1">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="w-full bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded cursor-pointer file:bg-brand-gold file:text-brand-dark file:border-0 file:rounded file:px-3 file:py-1 file:font-bold file:cursor-pointer"
-                />
-              </div>
-              {imagePreview && (
-                <div className="w-24 h-24 rounded border border-brand-gold/30 overflow-hidden">
-                  <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Submit Buttons */}
-          <div className="flex gap-4">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex-1 bg-brand-gold text-brand-dark font-bold py-3 rounded hover:bg-yellow-500 disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  جاري رفع الصورة والحفظ...
-                </>
-              ) : (
-                'حفظ الفئة'
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={resetForm}
-              className="flex-1 bg-brand-dark border border-brand-gold/20 text-brand-cream font-bold py-3 rounded hover:border-brand-gold"
-            >
-              إلغاء
-            </button>
-          </div>
-        </form>
-      )}
-
-      <div className="grid gap-4">
-        {categories.map(category => (
-          <div key={category._id} className="bg-[#1a120f] border border-brand-gold/20 rounded-lg p-4 flex justify-between items-center">
-            <div className="flex gap-4 flex-1">
-              {category.image ? (
-                <img 
-                  src={category.image} 
-                  alt={category.nameAr}
-                  className="w-16 h-16 object-cover rounded"
-                />
-              ) : (
-                <div className="w-16 h-16 bg-brand-dark border border-brand-gold/20 rounded flex items-center justify-center">
-                  <Image className="w-8 h-8 text-brand-gold/50" />
-                </div>
-              )}
-              <div>
-                <h3 className="text-brand-gold font-bold">{category.nameAr} ({category.name})</h3>
-                <p className="text-gray-400 text-sm">{category.description}</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
               <button
-                onClick={() => handleEdit(category)}
-                className="p-2 bg-blue-500/20 text-blue-400 rounded hover:bg-blue-500/40 transition-colors"
+                type="submit"
+                disabled={submitting}
+                className="flex-1 bg-brand-gold text-brand-dark font-bold py-3 rounded hover:bg-yellow-500 disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                <Edit2 className="w-5 h-5" />
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    جاري رفع الصورة والحفظ...
+                  </>
+                ) : (
+                  'حفظ الفئة'
+                )}
               </button>
               <button
-                onClick={() => handleDelete(category._id)}
-                className="p-2 bg-red-500/20 text-red-400 rounded hover:bg-red-500/40 transition-colors"
+                type="button"
+                onClick={resetForm}
+                className="flex-1 bg-brand-dark border border-brand-gold/20 text-brand-cream font-bold py-3 rounded hover:border-brand-gold"
               >
-                <Trash2 className="w-5 h-5" />
+                إلغاء
               </button>
             </div>
-          </div>
-        ))}
+          </form>
+        )}
+
+        <div className="grid gap-4">
+          {categories.map(category => (
+            <div key={category._id} className="bg-[#1a120f] border border-brand-gold/20 rounded-lg p-4 flex justify-between items-center">
+              <div className="flex gap-4 flex-1">
+                {category.image ? (
+                  <img 
+                    src={category.image} 
+                    alt={category.nameAr}
+                    className="w-16 h-16 object-cover rounded"
+                  />
+                ) : (
+                  <div className="w-16 h-16 bg-brand-dark border border-brand-gold/20 rounded flex items-center justify-center">
+                    <Image className="w-8 h-8 text-brand-gold/50" />
+                  </div>
+                )}
+                <div>
+                  <h3 className="text-brand-gold font-bold">{category.nameAr} ({category.name})</h3>
+                  <p className="text-gray-400 text-sm">{category.description}</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleEdit(category)}
+                  className="p-2 bg-blue-500/20 text-blue-400 rounded hover:bg-blue-500/40 transition-colors"
+                >
+                  <Edit2 className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => handleDelete(category._id)}
+                  className="p-2 bg-red-500/20 text-red-400 rounded hover:bg-red-500/40 transition-colors"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

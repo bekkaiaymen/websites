@@ -41,8 +41,8 @@ const AdvancedCustomBoxBuilder = ({ categoryFilter = null, preselectedProduct, c
 
   const handleBudgetSubmit = (e) => {
     e.preventDefault();
-    if (budget < 500) {
-      alert('الرجاء إدخال ميزانية معقولة (500 دج على الأقل)');
+    if (budget < 800) {
+      alert('الحد الأدنى للميزانية هو 800 دينار جزائري');
       return;
     }
     setStep(2);
@@ -188,11 +188,11 @@ ${notes || 'لا يوجد'}
               </div>
               <form onSubmit={handleBudgetSubmit} className="space-y-4 md:space-y-6">
                 <div className="relative">
-                  <input 
-                    type="number" 
-                    min="500"
+                  <input
+                    type="number"
+                    min="800"
                     step="100"
-                    placeholder="مثال: 3000"
+                    placeholder="مثال: 2000 (الحد الأدنى: 800 دج)"
                     className="w-full text-center text-2xl md:text-4xl font-bold bg-brand-dark border-2 border-brand-gold/50 rounded-2xl py-4 md:py-6 px-4 text-brand-gold focus:outline-none focus:border-brand-gold focus:ring-4 focus:ring-brand-gold/20 transition-all placeholder-brand-gold/20"
                     value={budget || ''}
                     onChange={(e) => setBudget(parseInt(e.target.value) || 0)}
@@ -222,7 +222,7 @@ ${notes || 'لا يوجد'}
                     <div className="flex items-center gap-2">
                       <input 
                         type="number" 
-                        min="0" 
+                        min="800" 
                         step="100" 
                         value={budget || ''} 
                         onChange={(e) => setBudget(parseInt(e.target.value) || 0)}

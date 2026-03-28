@@ -1,40 +1,44 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Loader2, Image } from 'lucide-react';
-import { buildApiUrl } from '../api';
+import { Edit, Save, X, Plus, AlertCircle, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import AdminNavbar from '../components/AdminNavbar';
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [error, setError] = useState('');
   const [editingId, setEditingId] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [imageFile, setImageFile] = useState(null);
-  const [formData, setFormData] = useState({
+  const [editData, setEditData] = useState({});
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newProduct, setNewProduct] = useState({
     name: '',
     nameAr: '',
-    category: '',
     price: '',
-    description: '',
-    descriptionAr: '',
-    stock: '100',
-    isLocal: false,
-    isNational: true,
-    premium: false
+    cost: '',
+    category: '',
+    stock: ''
   });
-  const [submitting, setSubmitting] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    Promise.all([fetchProducts(), fetchCategories()]);
+    fetchProducts();
+    fetchCategories();
   }, []);
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch(buildApiUrl('/api/products/all'));
-      const data = await res.json();
+      setLoading(true);
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${API_URL}/api/products`);
+      
+      if (!response.ok) throw new Error('فشل تحميل المنتجات');
+      
+      const data = await response.json();
       setProducts(data);
-    } catch (error) {
-      console.error('Error fetching products:', error);
+      setError('');
+    } catch (err) {
+      setError(err.message || 'حدث خطأ عند تحميل المنتجات');
     } finally {
       setLoading(false);
     }
@@ -42,341 +46,352 @@ const AdminProducts = () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch(buildApiUrl('/api/categories/all'));
-      const data = await res.json();
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${API_URL}/api/categories`);
+      
+      if (!response.ok) throw new Error('فشل تحميل الفئات');
+      
+      const data = await response.json();
       setCategories(data);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-    }
-  };
-
-  // Handle image file selection
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImageFile(file);
-      // Create preview URL
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-
-    try {
-      const method = editingId ? 'PUT' : 'POST';
-      const url = editingId 
-        ? buildApiUrl(`/api/products/${editingId}`)
-        : buildApiUrl('/api/products');
-
-      // Use FormData to handle file uploads
-      const formDataToSend = new FormData();
-      formDataToSend.append('name', formData.name);
-      formDataToSend.append('nameAr', formData.nameAr);
-      formDataToSend.append('category', formData.category);
-      formDataToSend.append('price', formData.price);
-      formDataToSend.append('description', formData.description);
-      formDataToSend.append('descriptionAr', formData.descriptionAr);
-      formDataToSend.append('stock', formData.stock);
-      formDataToSend.append('isLocal', formData.isLocal);
-      formDataToSend.append('isNational', formData.isNational);
-      formDataToSend.append('premium', formData.premium);
-
-      // Only append image file if a new image was selected
-      if (imageFile) {
-        formDataToSend.append('image', imageFile);
-      }
-
-      const res = await fetch(url, {
-        method,
-        body: formDataToSend // Don't set Content-Type header - browser will handle it
-      });
-
-      if (res.ok) {
-        await fetchProducts();
-        setShowForm(false);
-        setEditingId(null);
-        setImageFile(null);
-        setImagePreview(null);
-        setFormData({
-          name: '',
-          nameAr: '',
-          category: '',
-          price: '',
-          description: '',
-          descriptionAr: '',
-          stock: '100',
-          isLocal: false,
-          isNational: true,
-          premium: false
-        });
-      }
-    } catch (error) {
-      console.error('Error saving product:', error);
-      alert('حدث خطأ أثناء حفظ المنتج. يرجى المحاولة مرة أخرى.');
-    } finally {
-      setSubmitting(false);
+    } catch (err) {
+      console.error('Error fetching categories:', err);
     }
   };
 
   const handleEdit = (product) => {
-    setFormData({
-      name: product.name,
-      nameAr: product.nameAr,
-      category: product.category?._id || '',
-      price: product.price,
-      description: product.description,
-      descriptionAr: product.descriptionAr,
-      stock: product.stock,
-      isLocal: product.isLocal,
-      isNational: product.isNational,
-      premium: product.premium
-    });
-    setImagePreview(product.image); // Show existing image
-    setImageFile(null); // No new file selected yet
     setEditingId(product._id);
-    setShowForm(true);
+    setEditData({
+      name: product.name || '',
+      nameAr: product.nameAr || '',
+      price: product.price || '',
+      cost: product.cost || '',
+      category: product.category || '',
+      stock: product.stock || ''
+    });
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('هل أنت متأكد من الحذف؟')) return;
+  const handleSave = async (id) => {
     try {
-      await fetch(buildApiUrl(`/api/products/${id}`), { method: 'DELETE' });
-      await fetchProducts();
-    } catch (error) {
-      console.error('Error deleting product:', error);
+      const token = localStorage.getItem('adminToken');
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      
+      // Validate cost is not negative
+      if (parseFloat(editData.cost) < 0) {
+        setError('سعر الشراء لا يمكن أن يكون سالباً');
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/api/products/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify(editData)
+      });
+
+      if (!response.ok) throw new Error('فشل حفظ المنتج');
+
+      await response.json();
+      setEditingId(null);
+      setEditData({});
+      fetchProducts();
+      setError('');
+    } catch (err) {
+      setError(err.message || 'حدث خطأ عند حفظ المنتج');
     }
   };
 
-  const resetForm = () => {
-    setShowForm(false);
+  const handleCancel = () => {
     setEditingId(null);
-    setImageFile(null);
-    setImagePreview(null);
-    setFormData({
-      name: '',
-      nameAr: '',
-      category: '',
-      price: '',
-      description: '',
-      descriptionAr: '',
-      stock: '100',
-      isLocal: false,
-      isNational: true,
-      premium: false
-    });
+    setEditData({});
   };
 
-  if (loading) return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-brand-gold" /></div>;
+  const handleAddProduct = async (e) => {
+    e.preventDefault();
+    try {
+      if (!newProduct.name || !newProduct.nameAr || !newProduct.price || !newProduct.category) {
+        setError('يرجى ملء جميع الحقول المطلوبة');
+        return;
+      }
+
+      const token = localStorage.getItem('adminToken');
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+      const response = await fetch(`${API_URL}/api/products`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({
+          ...newProduct,
+          price: parseFloat(newProduct.price),
+          cost: parseFloat(newProduct.cost) || 0,
+          stock: parseInt(newProduct.stock) || 0
+        })
+      });
+
+      if (!response.ok) throw new Error('فشل إضافة المنتج');
+
+      setNewProduct({
+        name: '',
+        nameAr: '',
+        price: '',
+        cost: '',
+        category: '',
+        stock: ''
+      });
+      setShowAddForm(false);
+      fetchProducts();
+      setError('');
+    } catch (err) {
+      setError(err.message || 'حدث خطأ عند إضافة المنتج');
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
+    navigate('/admin/login');
+  };
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold text-brand-gold">إدارة المنتجات</h2>
-        <button
-          onClick={() => {
-            setFormData({
-              name: '',
-              nameAr: '',
-              category: '',
-              price: '',
-              description: '',
-              descriptionAr: '',
-              stock: '100',
-              isLocal: false,
-              isNational: true,
-              premium: false
-            });
-            setEditingId(null);
-            setImageFile(null);
-            setImagePreview(null);
-            setShowForm(true);
-          }}
-          className="flex items-center gap-2 bg-brand-gold text-brand-dark px-6 py-3 rounded-lg font-bold hover:bg-yellow-500 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          إضافة منتج
-        </button>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-brand-dark to-[#0f0a08]">
+      <AdminNavbar onLogout={handleLogout} />
 
-      {showForm && (
-        <form onSubmit={handleSubmit} className="bg-[#1a120f] border border-brand-gold/20 rounded-lg p-6 space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <input
-              type="text"
-              placeholder="اسم المنتج (EN)"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
-              required
-            />
-            <input
-              type="text"
-              placeholder="اسم المنتج (AR)"
-              value={formData.nameAr}
-              onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
-              className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
-              required
-            />
-            <select
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
-              required
-            >
-              <option value="">اختر فئة</option>
-              {categories.map(cat => (
-                <option key={cat._id} value={cat._id}>{cat.nameAr}</option>
-              ))}
-            </select>
-            <input
-              type="number"
-              placeholder="السعر"
-              value={formData.price}
-              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-              className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
-              required
-            />
-            <input
-              type="text"
-              placeholder="الوصف (EN)"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
-            />
-            <input
-              type="text"
-              placeholder="الوصف (AR)"
-              value={formData.descriptionAr}
-              onChange={(e) => setFormData({ ...formData, descriptionAr: e.target.value })}
-              className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
-            />
-            <input
-              type="number"
-              placeholder="المخزون"
-              value={formData.stock}
-              onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-              className="bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded"
-            />
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-brand-cream mb-2">
+              إدارة المنتجات
+            </h1>
+            <p className="text-gray-400">
+              عدد المنتجات: {products.length}
+            </p>
           </div>
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="flex items-center gap-2 bg-brand-gold text-brand-dark px-6 py-3 rounded-lg font-semibold hover:bg-brand-gold-light transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            إضافة منتج
+          </button>
+        </div>
 
-          {/* Image Upload Section */}
-          <div className="space-y-2">
-            <label className="block text-brand-cream font-bold">صورة المنتج</label>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="w-full bg-brand-dark border border-brand-gold/20 text-brand-cream px-4 py-2 rounded cursor-pointer file:bg-brand-gold file:text-brand-dark file:border-0 file:rounded file:px-3 file:py-1 file:font-bold file:cursor-pointer"
-                />
-              </div>
-              {imagePreview && (
-                <div className="w-24 h-24 rounded border border-brand-gold/30 overflow-hidden">
-                  <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                </div>
-              )}
-            </div>
+        {/* Error Alert */}
+        {error && (
+          <div className="mb-8 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <p className="text-red-200">{error}</p>
           </div>
+        )}
 
-          {/* Checkboxes */}
-          <div className="flex flex-wrap gap-4">
-            <label className="flex items-center gap-2 text-brand-cream cursor-pointer">
+        {/* Add Product Form */}
+        {showAddForm && (
+          <div className="bg-[#1a120f] border border-brand-gold/30 rounded-lg p-6 mb-8">
+            <h2 className="text-xl font-semibold text-brand-cream mb-4">
+              إضافة منتج جديد
+            </h2>
+            <form onSubmit={handleAddProduct} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <input
-                type="checkbox"
-                checked={formData.isLocal}
-                onChange={(e) => setFormData({ ...formData, isLocal: e.target.checked })}
+                type="text"
+                placeholder="الاسم بالإنجليزية"
+                value={newProduct.name}
+                onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                required
+                className="bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-3 text-brand-cream placeholder-gray-600 focus:border-brand-gold outline-none"
               />
-              توصيل محلي فقط
-            </label>
-            <label className="flex items-center gap-2 text-brand-cream cursor-pointer">
               <input
-                type="checkbox"
-                checked={formData.isNational}
-                onChange={(e) => setFormData({ ...formData, isNational: e.target.checked })}
+                type="text"
+                placeholder="الاسم بالعربية"
+                value={newProduct.nameAr}
+                onChange={(e) => setNewProduct({ ...newProduct, nameAr: e.target.value })}
+                required
+                className="bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-3 text-brand-cream placeholder-gray-600 focus:border-brand-gold outline-none"
               />
-              توصيل وطني
-            </label>
-            <label className="flex items-center gap-2 text-brand-cream cursor-pointer">
               <input
-                type="checkbox"
-                checked={formData.premium}
-                onChange={(e) => setFormData({ ...formData, premium: e.target.checked })}
+                type="number"
+                placeholder="سعر البيع (د.ج)"
+                value={newProduct.price}
+                onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                required
+                step="0.01"
+                className="bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-3 text-brand-cream placeholder-gray-600 focus:border-brand-gold outline-none"
               />
-              فاخر
-            </label>
-          </div>
-
-          {/* Submit Buttons */}
-          <div className="flex gap-4">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex-1 bg-brand-gold text-brand-dark font-bold py-3 rounded hover:bg-yellow-500 disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  جاري رفع الصورة والحفظ...
-                </>
-              ) : (
-                'حفظ المنتج'
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={resetForm}
-              className="flex-1 bg-brand-dark border border-brand-gold/20 text-brand-cream font-bold py-3 rounded hover:border-brand-gold"
-            >
-              إلغاء
-            </button>
-          </div>
-        </form>
-      )}
-
-      <div className="grid gap-4">
-        {products.map(product => (
-          <div key={product._id} className="bg-[#1a120f] border border-brand-gold/20 rounded-lg p-4 flex justify-between items-center">
-            <div className="flex gap-4 flex-1">
-              {product.image ? (
-                <img 
-                  src={product.image} 
-                  alt={product.nameAr}
-                  className="w-16 h-16 object-cover rounded"
-                />
-              ) : (
-                <div className="w-16 h-16 bg-brand-dark border border-brand-gold/20 rounded flex items-center justify-center">
-                  <Image className="w-8 h-8 text-brand-gold/50" />
-                </div>
-              )}
-              <div>
-                <h3 className="text-brand-gold font-bold">{product.nameAr}</h3>
-                <p className="text-gray-400 text-sm">{product.category?.nameAr}</p>
-                <p className="text-brand-cream font-bold">{product.price} دج</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleEdit(product)}
-                className="p-2 bg-blue-500/20 text-blue-400 rounded hover:bg-blue-500/40 transition-colors"
+              <input
+                type="number"
+                placeholder="سعر الشراء (د.ج)"
+                value={newProduct.cost}
+                onChange={(e) => setNewProduct({ ...newProduct, cost: e.target.value })}
+                step="0.01"
+                className="bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-3 text-brand-cream placeholder-gray-600 focus:border-brand-gold outline-none"
+              />
+              <select
+                value={newProduct.category}
+                onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
+                required
+                className="bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-3 text-brand-cream focus:border-brand-gold outline-none"
               >
-                <Edit2 className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => handleDelete(product._id)}
-                className="p-2 bg-red-500/20 text-red-400 rounded hover:bg-red-500/40 transition-colors"
-              >
-                <Trash2 className="w-5 h-5" />
-              </button>
-            </div>
+                <option value="">اختر الفئة</option>
+                {categories.map(cat => (
+                  <option key={cat._id} value={cat._id}>{cat.nameAr}</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                placeholder="المخزون"
+                value={newProduct.stock}
+                onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
+                className="bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-3 text-brand-cream placeholder-gray-600 focus:border-brand-gold outline-none"
+              />
+              <div className="md:col-span-2 lg:col-span-3 flex gap-4">
+                <button
+                  type="submit"
+                  className="flex-1 bg-brand-gold text-brand-dark px-6 py-3 rounded-lg font-semibold hover:bg-brand-gold-light transition-colors"
+                >
+                  إضافة
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(false)}
+                  className="flex-1 bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-700 transition-colors"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </form>
           </div>
-        ))}
+        )}
+
+        {/* Products Table */}
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="text-gray-400">جاري تحميل المنتجات...</div>
+          </div>
+        ) : products.length === 0 ? (
+          <div className="bg-[#1a120f] border border-brand-gold/30 rounded-lg p-8 text-center">
+            <p className="text-gray-400">لا توجد منتجات</p>
+          </div>
+        ) : (
+          <div className="bg-[#1a120f] border border-brand-gold/30 rounded-lg overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-brand-gold/10 border-b border-brand-gold/30">
+                <tr>
+                  <th className="px-6 py-4 text-right text-sm font-semibold text-brand-cream">الاسم بالعربية</th>
+                  <th className="px-6 py-4 text-right text-sm font-semibold text-brand-cream">الاسم</th>
+                  <th className="px-6 py-4 text-right text-sm font-semibold text-brand-cream">سعر البيع</th>
+                  <th className="px-6 py-4 text-right text-sm font-semibold text-brand-cream">سعر الشراء</th>
+                  <th className="px-6 py-4 text-right text-sm font-semibold text-brand-cream">الربح للوحدة</th>
+                  <th className="px-6 py-4 text-right text-sm font-semibold text-brand-cream">المخزون</th>
+                  <th className="px-6 py-4 text-right text-sm font-semibold text-brand-cream">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-brand-gold/10">
+                {products.map(product => {
+                  const profit = (product.price || 0) - (product.cost || 0);
+                  const isEditing = editingId === product._id;
+
+                  return (
+                    <tr key={product._id} className="hover:bg-brand-gold/5 transition-colors">
+                      <td className="px-6 py-4 text-sm text-brand-cream">
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editData.nameAr}
+                            onChange={(e) => setEditData({ ...editData, nameAr: e.target.value })}
+                            className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded p-2 text-brand-cream focus:border-brand-gold outline-none"
+                          />
+                        ) : (
+                          product.nameAr
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-400">
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editData.name}
+                            onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                            className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded p-2 text-brand-cream focus:border-brand-gold outline-none"
+                          />
+                        ) : (
+                          product.name
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-brand-cream font-semibold">
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            value={editData.price}
+                            onChange={(e) => setEditData({ ...editData, price: e.target.value })}
+                            step="0.01"
+                            className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded p-2 text-brand-cream focus:border-brand-gold outline-none"
+                          />
+                        ) : (
+                          `${product.price.toLocaleString('ar-DZ')} د.ج`
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-blue-400 font-semibold">
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            value={editData.cost}
+                            onChange={(e) => setEditData({ ...editData, cost: e.target.value })}
+                            step="0.01"
+                            className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded p-2 text-brand-cream focus:border-brand-gold outline-none"
+                          />
+                        ) : (
+                          `${(product.cost || 0).toLocaleString('ar-DZ')} د.ج`
+                        )}
+                      </td>
+                      <td className={`px-6 py-4 text-sm font-semibold ${profit > 0 ? 'text-green-400' : profit < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                        {profit > 0 ? '+' : ''}{profit.toLocaleString('ar-DZ')} د.ج
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-400">
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            value={editData.stock}
+                            onChange={(e) => setEditData({ ...editData, stock: e.target.value })}
+                            className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded p-2 text-brand-cream focus:border-brand-gold outline-none"
+                          />
+                        ) : (
+                          product.stock
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        {isEditing ? (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleSave(product._id)}
+                              className="text-green-400 hover:text-green-300"
+                            >
+                              <Save className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={handleCancel}
+                              className="text-red-400 hover:text-red-300"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleEdit(product)}
+                            className="text-brand-gold hover:text-brand-gold-light"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
