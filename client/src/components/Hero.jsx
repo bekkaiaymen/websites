@@ -8,9 +8,10 @@ const Hero = () => {
       {/* Background Image with Dark Overlay */}
       <div className="absolute inset-0 z-0">
         <img 
-          src="https://images.unsplash.com/photo-1606313564200-e75d5e30476d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80" 
+          src="/hero-bg.jpg" 
           alt="Luxury Gifts & Chocolate" 
           className="w-full h-full object-cover opacity-30" 
+          onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1606313564200-e75d5e30476d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80'; }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-brand-dark/80 to-transparent"></div>
         <div className="absolute inset-0 bg-brand-dark/40 mix-blend-multiply"></div>

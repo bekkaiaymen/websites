@@ -2,16 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { Package, Check, Loader2, Plus, Minus, X, ChevronRight } from 'lucide-react';
 import { getCategories, getProducts } from '../api';
 
-const AdvancedCustomBoxBuilder = ({ categoryFilter = null }) => {
+const AdvancedCustomBoxBuilder = ({ categoryFilter = null, preselectedProduct, clearPreselected }) => {
   // Steps management
   const [step, setStep] = useState(1); // 1: Budget, 2: Products
   const [budget, setBudget] = useState(0);
   const [selectedItems, setSelectedItems] = useState({});
+  const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [localCategoryFilter, setLocalCategoryFilter] = useState(null); // Local filter inside builder
   const [productsLoading, setProductsLoading] = useState(false);
+
+  // Handle preselected product
+  useEffect(() => {
+    if (preselectedProduct) {
+      const pid = preselectedProduct._id || preselectedProduct.id;
+      setSelectedItems({ [pid]: 1 });
+      setBudget(prev => Math.max(prev || 0, preselectedProduct.price || 0));
+      setStep(1); // Ensure they start at budget
+    }
+  }, [preselectedProduct]);
 
   // Fetch categories and products
   useEffect(() => {
@@ -87,6 +98,7 @@ const AdvancedCustomBoxBuilder = ({ categoryFilter = null }) => {
     const orderData = {
       orderType: 'Custom Box',
       budget,
+      notes,
       total: currentTotal,
       items: itemsArray,
       flavors: [itemSummary],
@@ -115,6 +127,9 @@ ${itemSummary}
 
 المجموع الحالي: ${currentTotal} دج
 
+الملاحظات:
+${notes || 'لا يوجد'}
+
 أضف باقي المنتجات من اختيارك لتكملة الميزانية.`;
 
       const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(whatsappMessage)}`;
@@ -123,6 +138,8 @@ ${itemSummary}
       // Reset form
       setBudget(0);
       setSelectedItems({});
+      setNotes('');
+      if (clearPreselected) clearPreselected();
       setStep(1);
     } catch (error) {
       console.error('Error saving order:', error);
@@ -343,6 +360,17 @@ ${itemSummary}
                     <p className="text-gray-400 text-base md:text-lg">لا توجد منتجات متاحة في هذه الفئة</p>
                   </div>
                 )}
+              </div>
+
+              {/* Notes Section */}
+              <div className="mb-6 md:mb-8 bg-brand-dark/50 border border-brand-gold/20 rounded-xl p-4 md:p-6">
+                <h4 className="text-brand-cream font-bold mb-3 text-right">ملاحظات إضافية (اختياري)</h4>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="اكتب أي ملاحظة تريد إضافتها للبوكس أو للمنتج المختار (مثل: غلافي المفضل، كارت الإهداء...)"
+                  className="w-full bg-[#0a0705] border border-brand-gold/30 rounded-lg p-3 text-brand-cream focus:border-brand-gold outline-none min-h-[100px] text-right text-sm md:text-base"
+                />
               </div>
 
               {/* Action Buttons */}
