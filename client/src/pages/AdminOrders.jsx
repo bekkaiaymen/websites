@@ -78,8 +78,7 @@ const AdminOrders = () => {
     { name: 'القرارة', cost: 500 }
   ];
 
-  const handleMunicipalityChange = (e) => {
-    const selectedMuni = e.target.value;
+  const handleMunicipalityChange = (selectedMuni) => {
     const muniData = ghardaiaMunicipalities.find((m) => m.name === selectedMuni);
     let newCost = muniData ? muniData.cost : 0;
     
