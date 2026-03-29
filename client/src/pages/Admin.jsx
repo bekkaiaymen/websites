@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Truck, Loader2, Settings, Package, Tag } from 'lucide-react';
+import { Truck, Loader2, Settings, Package, Tag, LogOut, ArrowRight } from 'lucide-react';
 import { buildApiUrl } from '../api';
 import AdminCategories from './AdminCategories';
 import AdminProducts from './AdminProducts';
@@ -18,7 +18,11 @@ const Admin = () => {
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch(buildApiUrl('/api/orders'));
+      const res = await fetch(buildApiUrl('/api/orders'), {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
       const data = await res.json();
       if (!res.ok) {
         const errorMsg = data?.details || data?.error || `HTTP ${res.status}: Failed to fetch orders`;
@@ -54,12 +58,24 @@ const Admin = () => {
     <div className="min-h-screen bg-[#140d0b] text-brand-cream font-tajawal" dir="rtl">
       <div className="container mx-auto max-w-7xl">
         {/* Header */}
-        <div className="p-8 border-b border-brand-gold/10">
-          <h1 className="text-4xl font-bold text-brand-gold mb-2 flex items-center gap-3">
-            <Settings className="w-10 h-10" />
-            لوحة التحكم الإدارية
-          </h1>
-          <p className="text-gray-400">إدارة الطلبات والمنتجات والفئات</p>
+<div className="p-8 border-b border-brand-gold/10 flex justify-between items-center">
+            <div>
+              <h1 className="text-4xl font-bold text-brand-gold mb-2 flex items-center gap-3">
+                <Settings className="w-10 h-10" />
+                لوحة التحكم الإدارية
+              </h1>
+              <p className="text-gray-400">إدارة الطلبات والمنتجات والفئات</p>
+            </div>
+            <button
+               onClick={() => {
+                 localStorage.removeItem('token');
+                 window.location.href = '/admin/login';
+               }}
+               className="flex items-center gap-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 px-4 py-2 rounded-lg transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="font-bold">تسجيل الخروج</span>
+            </button>
         </div>
 
         {/* Tabs */}
