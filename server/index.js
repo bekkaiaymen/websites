@@ -14,7 +14,8 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Authentication Middleware
 const authenticateToken = (req, res, next) => {
@@ -241,7 +242,7 @@ app.get('/api/products/all', async (req, res) => {
 });
 
 // POST /api/products - Create a new product
-app.post('/api/products', async (req, res) => {
+app.post('/api/products', authenticateToken, async (req, res) => {
   try {
     const {
       name,
@@ -289,7 +290,7 @@ app.post('/api/products', async (req, res) => {
 });
 
 // PUT /api/products/:id - Update a product
-app.put('/api/products/:id', async (req, res) => {
+app.put('/api/products/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -341,7 +342,7 @@ app.put('/api/products/:id', async (req, res) => {
 });
 
 // DELETE /api/products/:id - Delete a product
-app.delete('/api/products/:id', async (req, res) => {
+app.delete('/api/products/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const product = await Product.findByIdAndDelete(id);
