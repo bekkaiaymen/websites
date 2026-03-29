@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LogOut, BarChart3, Box, Grid3x3, Settings, Truck } from 'lucide-react';
 
@@ -6,6 +6,14 @@ const AdminNavbar = ({ onLogout }) => {
   const location = useLocation();
 
   const isActive = (path) => location.pathname === path;
+
+  // READ ROLE FOR CONDITIONAL RENDERING
+  const adminUserStr = localStorage.getItem('adminUser');
+  let isDelivery = false;
+  try {
+    const user = adminUserStr ? JSON.parse(adminUserStr) : null;
+    if (user && user.role === 'delivery') isDelivery = true;
+  } catch(e) {}
 
   return (
     <nav className="bg-[#1a120f] border-b border-brand-gold/20 sticky top-0 z-40">
@@ -25,17 +33,19 @@ const AdminNavbar = ({ onLogout }) => {
 
         {/* Navigation Links */}
         <div className="flex flex-wrap gap-2">
-          <Link
-            to="/admin/dashboard"
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-              isActive('/admin/dashboard')
-                ? 'bg-brand-gold text-brand-dark'
-                : 'text-gray-400 hover:text-brand-cream bg-brand-gold/10 hover:bg-brand-gold/20'
-            }`}
-          >
-            <BarChart3 className="w-4 h-4" />
-            <span className="text-sm">التحليلات</span>
-          </Link>
+          {!isDelivery && (
+            <Link
+              to="/admin/dashboard"
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                isActive('/admin/dashboard')
+                  ? 'bg-brand-gold text-brand-dark'
+                  : 'text-gray-400 hover:text-brand-cream bg-brand-gold/10 hover:bg-brand-gold/20'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" />
+              <span className="text-sm">التحليلات</span>
+            </Link>
+          )}
 
           <Link
             to="/admin/orders"
@@ -49,29 +59,33 @@ const AdminNavbar = ({ onLogout }) => {
             <span className="text-sm">الطلبيات</span>
           </Link>
 
-          <Link
-            to="/admin/products"
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-              isActive('/admin/products')
-                ? 'bg-brand-gold text-brand-dark'
-                : 'text-gray-400 hover:text-brand-cream bg-brand-gold/10 hover:bg-brand-gold/20'
-            }`}
-          >
-            <Box className="w-4 h-4" />
-            <span className="text-sm">المنتجات</span>
-          </Link>
+          {!isDelivery && (
+            <Link
+              to="/admin/products"
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                isActive('/admin/products')
+                  ? 'bg-brand-gold text-brand-dark'
+                  : 'text-gray-400 hover:text-brand-cream bg-brand-gold/10 hover:bg-brand-gold/20'
+              }`}
+            >
+              <Box className="w-4 h-4" />
+              <span className="text-sm">المنتجات</span>
+            </Link>
+          )}
 
-          <Link
-            to="/admin/categories"
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-              isActive('/admin/categories')
-                ? 'bg-brand-gold text-brand-dark'
-                : 'text-gray-400 hover:text-brand-cream bg-brand-gold/10 hover:bg-brand-gold/20'
-            }`}
-          >
-            <Grid3x3 className="w-4 h-4" />
-            <span className="text-sm">الفئات</span>
-          </Link>
+          {!isDelivery && (
+            <Link
+              to="/admin/categories"
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                isActive('/admin/categories')
+                  ? 'bg-brand-gold text-brand-dark'
+                  : 'text-gray-400 hover:text-brand-cream bg-brand-gold/10 hover:bg-brand-gold/20'
+              }`}
+            >
+              <Grid3x3 className="w-4 h-4" />
+              <span className="text-sm">الفئات</span>
+            </Link>
+          )}
         </div>
       </div>
     </nav>

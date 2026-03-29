@@ -29,7 +29,11 @@ const AdminLogin = () => {
       const data = await response.json();
       localStorage.setItem('adminToken', data.token);
       localStorage.setItem('adminUser', JSON.stringify(data.admin));
-      navigate('/admin/dashboard');
+      if (data.admin.role === 'delivery') {
+        navigate('/admin/orders');
+      } else {
+        navigate('/admin/dashboard');
+      }
     } catch (err) {
       setError(err.message || 'حدث خطأ أثناء الدخول');
     } finally {

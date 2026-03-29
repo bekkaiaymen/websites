@@ -1,4 +1,6 @@
-﻿import React from 'react';
+﻿const fs = require('fs');
+const file = 'client/src/components/ProtectedRoute.jsx';
+const content = import React from 'react';
 import { Navigate } from 'react-router-dom';
 
 const ProtectedRoute = ({ element, allowedRoles }) => {
@@ -12,6 +14,7 @@ const ProtectedRoute = ({ element, allowedRoles }) => {
   }
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    // If delivery tries to access forbidden page, redirect to their home
     if (user.role === 'delivery') return <Navigate to="/admin/orders" replace />;
     return <Navigate to="/admin/dashboard" replace />;
   }
@@ -20,3 +23,5 @@ const ProtectedRoute = ({ element, allowedRoles }) => {
 };
 
 export default ProtectedRoute;
+;
+fs.writeFileSync(file, content);

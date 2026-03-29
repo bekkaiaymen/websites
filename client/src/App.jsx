@@ -16,10 +16,10 @@ const App = () => {
         <Route path="/" element={<Home />} />
         <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin/dashboard" element={<ProtectedRoute element={<AdminDashboard />} />} />
+        <Route path="/admin/dashboard" element={<ProtectedRoute element={<AdminDashboard />} allowedRoles={['admin', 'superadmin']} />} />
         <Route path="/admin/orders" element={<ProtectedRoute element={<AdminOrders />} />} />
-        <Route path="/admin/products" element={<ProtectedRoute element={<AdminProducts />} />} />
-        <Route path="/admin/categories" element={<ProtectedRoute element={<AdminCategories />} />} />
+        <Route path="/admin/products" element={<ProtectedRoute element={<AdminProducts />} allowedRoles={['admin', 'superadmin']} />} />
+        <Route path="/admin/categories" element={<ProtectedRoute element={<AdminCategories />} allowedRoles={['admin', 'superadmin']} />} />
       </Routes>
     </Router>
   );
