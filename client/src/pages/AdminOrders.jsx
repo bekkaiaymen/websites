@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, Edit2, Loader2, Save, X, TrendingUp } from 'lucide-react';
+import { Trash2, Edit2, Loader2, Save, X, TrendingUp, Send } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import AdminNavbar from '../components/AdminNavbar';
 import { buildApiUrl } from '../api';
 
 const AdminOrders = () => {
@@ -8,6 +10,34 @@ const AdminOrders = () => {
   const [error, setError] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
+    navigate('/admin/login');
+  };
+
+  const handleRequestDelivery = (order) => {
+    const phone = "213664021599";
+    const customerName = order.customerName || "غير محدد";
+    const customerPhone = order.customerPhone || "غير محدد";
+    const wilaya = order.wilaya || "غير محددة";
+    const address = order.address || "غير محدد";
+    const total = order.total || order.budget || 0;
+    const deliveryCost = order.deliveryCost || 0;
+    const finalTotal = total + deliveryCost;
+    
+    const message = `مرحباً، يوجد طلبية جديدة للتوصيل:
+👤 اسم الزبون: ${customerName}
+📱 رقم الهاتف: ${customerPhone}
+📍 مكان التوصيل: ${wilaya} - ${address}
+💵 مجموع الطلبية: ${total} د.ج
+🚚 سعر التوصيل: ${deliveryCost} د.ج
+💰 المجموع الكلي: ${finalTotal} د.ج`;
+    
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+  };
 
   useEffect(() => {
     fetchOrders();
@@ -140,14 +170,18 @@ const AdminOrders = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {error && (
-        <div className="p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400">
-          {error}
-        </div>
-      )}
+    <div className="min-h-screen bg-gradient-to-br from-brand-dark to-[#0f0a08]">
+      <AdminNavbar onLogout={handleLogout} />
 
-      <div className="bg-[#1a120f] border border-brand-gold/20 rounded-lg p-6">
+      <div className="container mx-auto px-4 py-8">
+        <div className="space-y-6">
+          {error && (
+            <div className="p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400">
+              {error}
+            </div>
+          )}
+
+          <div className="bg-[#1a120f] border border-brand-gold/20 rounded-lg p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-brand-gold">إدارة الطلبيات</h2>
           <button
@@ -351,7 +385,7 @@ const AdminOrders = () => {
                           </span>
                         </td>
                         <td className="p-3">
-                          <div className="flex gap-2">
+                            <div className="flex gap-2 flex-wrap">
                             <button
                               onClick={() => startEdit(order)}
                               className="px-3 py-2 bg-brand-gold/20 hover:bg-brand-gold/30 text-brand-gold rounded text-xs font-bold"
@@ -359,8 +393,13 @@ const AdminOrders = () => {
                               <Edit2 className="w-4 h-4 inline mr-1" />
                               تعديل
                             </button>
-                            <button
-                              onClick={() => deleteOrder(order._id)}
+                            <button                                onClick={() => handleRequestDelivery(order)}
+                                className="px-3 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded text-xs font-bold flex items-center"
+                              >
+                                <Send className="w-4 h-4 mr-1" />
+                                طلب توصيل
+                              </button>
+                              <button                              onClick={() => deleteOrder(order._id)}
                               className="px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded text-xs font-bold"
                             >
                               <Trash2 className="w-4 h-4 inline mr-1" />
@@ -378,7 +417,7 @@ const AdminOrders = () => {
         )}
       </div>
     </div>
+      </div>
+    </div>
   );
 };
-
-export default AdminOrders;
