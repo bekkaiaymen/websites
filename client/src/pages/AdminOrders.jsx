@@ -288,40 +288,41 @@ const AdminOrders = () => {
                                     className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-2 text-brand-cream"
                                   />
                                 </div>
-                                <label className="text-sm text-gray-400 mb-2 block">
-                                  الحالة
-                                </label>
-                                <select
-                                  value={editData.status}
-                                  onChange={(e) =>
-                                    handleStatusChange(e.target.value)
-                                  }
-                                  className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-2 text-brand-cream"
-                                >
-                                  <option value="Pending">معلق</option>
-                                  <option value="Delivered">تم التوصيل</option>
-                                  <option value="Returned">مرجوع</option>
-                                  <option value="Cancelled">ملغى</option>
-                                </select>
-                              </div>
+                                <div>
+                                  <label className="text-sm text-gray-400 mb-2 block">
+                                    الحالة
+                                  </label>
+                                  <select
+                                    value={editData.status}
+                                    onChange={(e) =>
+                                      handleStatusChange(e.target.value)
+                                    }
+                                    className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-2 text-brand-cream"
+                                  >
+                                    <option value="Pending">معلق</option>
+                                    <option value="Delivered">تم التوصيل</option>
+                                    <option value="Returned">مرجوع</option>
+                                    <option value="Cancelled">ملغى</option>
+                                  </select>
+                                </div>
 
-                              <div>
-                                <label className="text-sm text-gray-400 mb-2 block">
-                                  سعر التوصيل (د.ج)
-                                </label>
-                                <input
-                                  type="number"
-                                  value={editData.deliveryCost}
-                                  onChange={(e) =>
-                                    setEditData({
-                                      ...editData,
-                                      deliveryCost: parseFloat(e.target.value) || 0
-                                    })
-                                  }
-                                  className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-2 text-brand-cream"
-                                />
+                                <div>
+                                  <label className="text-sm text-gray-400 mb-2 block">
+                                    سعر التوصيل (د.ج)
+                                  </label>
+                                  <input
+                                    type="number"
+                                    value={editData.deliveryCost}
+                                    onChange={(e) =>
+                                      setEditData({
+                                        ...editData,
+                                        deliveryCost: parseFloat(e.target.value) || 0
+                                      })
+                                    }
+                                    className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-2 text-brand-cream"
+                                  />
+                                </div>
                               </div>
-                            </div>
 
                             <div className="bg-brand-gold/10 p-3 rounded">
                               {editData.status === 'Delivered' && (
@@ -421,3 +422,4 @@ const AdminOrders = () => {
     </div>
   );
 };
+export default AdminOrders;
