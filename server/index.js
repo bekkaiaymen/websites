@@ -435,6 +435,51 @@ app.put('/api/admin/orders/:id/status', authenticateToken, async (req, res) => {
   }
 });
 
+// PUT /api/orders/:id - Update order (status and delivery cost)
+app.put('/api/orders/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, deliveryCost } = req.body;
+
+    if (!['Pending', 'Confirmed', 'Delivered', 'Returned', 'Cancelled'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const order = await Order.findByIdAndUpdate(
+      id,
+      { status, deliveryCost: deliveryCost || 0 },
+      { new: true }
+    );
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    res.json(order);
+  } catch (error) {
+    console.error('Error updating order:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// DELETE /api/orders/:id - Delete order
+app.delete('/api/orders/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const order = await Order.findByIdAndDelete(id);
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    res.json({ message: 'Order deleted successfully', orderId: id });
+  } catch (error) {
+    console.error('Error deleting order:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ============ PROFIT ANALYTICS ENDPOINTS ============
 
 // GET /api/admin/analytics/profit - Get profit data for a date range
