@@ -27,7 +27,11 @@ const AdminCategories = () => {
   const fetchCategories = async () => {
     try {
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const res = await fetch(`${API_URL}/api/categories`);
+      const res = await fetch(`${API_URL}/api/categories`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        }
+      });
       const data = await res.json();
       setCategories(data);
     } catch (error) {
@@ -62,35 +66,39 @@ const AdminCategories = () => {
         ? `${API_URL}/api/categories/${editingId}`
         : `${API_URL}/api/categories`;
 
-      // Use FormData to handle file uploads
-      const formDataToSend = new FormData();
-      formDataToSend.append('name', formData.name);
-      formDataToSend.append('nameAr', formData.nameAr);
-      formDataToSend.append('icon', formData.icon);
-      formDataToSend.append('description', formData.description);
-      formDataToSend.append('color', formData.color);
-
-      // Only append image file if a new image was selected
-      if (imageFile) {
-        formDataToSend.append('image', imageFile);
-      }
+      // Send as JSON (simpler approach without file upload)
+      const dataToSend = {
+        name: formData.name,
+        nameAr: formData.nameAr,
+        icon: formData.icon,
+        description: formData.description,
+        color: formData.color,
+        image: imagePreview || null // Send preview as base64 or null
+      };
 
       const res = await fetch(url, {
         method,
-        body: formDataToSend // Don't set Content-Type header - browser will handle it
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        },
+        body: JSON.stringify(dataToSend)
       });
 
-      if (res.ok) {
-        await fetchCategories();
-        setShowForm(false);
-        setEditingId(null);
-        setImageFile(null);
-        setImagePreview(null);
-        setFormData({ name: '', nameAr: '', icon: '', description: '', color: '#D4AF37' });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'فشل حفظ الفئة');
       }
+
+      await fetchCategories();
+      setShowForm(false);
+      setEditingId(null);
+      setImageFile(null);
+      setImagePreview(null);
+      setFormData({ name: '', nameAr: '', icon: '', description: '', color: '#D4AF37' });
     } catch (error) {
       console.error('Error saving category:', error);
-      alert('حدث خطأ أثناء حفظ الفئة. يرجى المحاولة مرة أخرى.');
+      alert('خطأ: ' + error.message);
     } finally {
       setSubmitting(false);
     }
@@ -114,10 +122,19 @@ const AdminCategories = () => {
     if (!confirm('هل أنت متأكد من الحذف؟')) return;
     try {
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      await fetch(`${API_URL}/api/categories/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/api/categories/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        }
+      });
+      if (!res.ok) {
+        throw new Error('فشل حذف الفئة');
+      }
       await fetchCategories();
     } catch (error) {
       console.error('Error deleting category:', error);
+      alert('خطأ: ' + error.message);
     }
   };
 

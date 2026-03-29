@@ -134,7 +134,7 @@ app.get('/api/categories/all', async (req, res) => {
 });
 
 // POST /api/categories - Create a new category
-app.post('/api/categories', async (req, res) => {
+app.post('/api/categories', authenticateToken, async (req, res) => {
   try {
     const { name, nameAr, icon, image, color, description } = req.body;
     
@@ -162,7 +162,7 @@ app.post('/api/categories', async (req, res) => {
 });
 
 // PUT /api/categories/:id - Update a category
-app.put('/api/categories/:id', async (req, res) => {
+app.put('/api/categories/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, nameAr, icon, image, color, description, active } = req.body;
@@ -186,7 +186,7 @@ app.put('/api/categories/:id', async (req, res) => {
 });
 
 // DELETE /api/categories/:id - Delete a category
-app.delete('/api/categories/:id', async (req, res) => {
+app.delete('/api/categories/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const category = await Category.findByIdAndDelete(id);
