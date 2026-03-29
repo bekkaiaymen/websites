@@ -459,6 +459,12 @@ app.get('/api/admin/analytics/profit', authenticateToken, async (req, res) => {
     orders.forEach(order => {
       if (order.status === 'Delivered') {
         revenue += order.total || 0;
+        // Calculate cost of goods sold from items
+        if (order.items && Array.isArray(order.items)) {
+          order.items.forEach(item => {
+            costs += (item.cost || item.price || 0) * (item.quantity || 1);
+          });
+        }
       } else if (order.status === 'Returned') {
         // When returned, lose half the delivery cost
         losses += (order.deliveryCost || 0) * 0.5;
@@ -473,15 +479,15 @@ app.get('/api/admin/analytics/profit', authenticateToken, async (req, res) => {
     const profit = revenue - costs - losses - totalExpenses;
 
     res.json({
-      revenue,
-      totalCosts: costs,
-      losses,
-      totalExpenses,
-      profit,
-      orderCount: orders.length,
-      deliveredCount: orders.filter(o => o.status === 'Delivered').length,
-      returnedCount: orders.filter(o => o.status === 'Returned').length,
-      pendingCount: orders.filter(o => o.status === 'Pending').length,
+      revenue: revenue || 0,
+      totalCosts: costs || 0,
+      losses: losses || 0,
+      totalExpenses: totalExpenses || 0,
+      profit: profit || 0,
+      orderCount: orders.length || 0,
+      deliveredCount: orders.filter(o => o.status === 'Delivered').length || 0,
+      returnedCount: orders.filter(o => o.status === 'Returned').length || 0,
+      pendingCount: orders.filter(o => o.status === 'Pending').length || 0,
       startDate: startDate || null,
       endDate: endDate || null
     });
