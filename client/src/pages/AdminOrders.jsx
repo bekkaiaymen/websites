@@ -63,19 +63,19 @@ const AdminOrders = () => {
 
   const ghardaiaMunicipalities = [
     { name: 'غرداية', cost: 200 },
-    { name: 'بونورة', cost: 200 },
-    { name: 'بني يزقن', cost: 200 },
-    { name: 'القرارة', cost: 600 },
-    { name: 'بريان', cost: 500 },
-    { name: 'زلفانة', cost: 500 },
-    { name: 'المنيعة', cost: 1000 },
+    { name: 'مليكة', cost: 200 },
+    { name: 'بن يزقن', cost: 200 },
+    { name: 'بنورة', cost: 200 },
+    { name: 'لشبور', cost: 300 },
+    { name: 'التوزوز', cost: 300 },
+    { name: 'تافيلالت', cost: 300 },
     { name: 'العطف', cost: 350 },
+    { name: 'بوهراوة', cost: 350 },
+    { name: 'الضاية', cost: 350 },
+    { name: 'لازون', cost: 400 },
+    { name: 'بريان', cost: 500 },
     { name: 'متليلي', cost: 500 },
-    { name: 'سبسب', cost: 600 },
-    { name: 'الضاية بن ضحوة', cost: 400 },
-    { name: 'تغردايت', cost: 200 },
-    { name: 'حاسي لفحل', cost: 800 },
-    { name: 'منصورة', cost: 800 }
+    { name: 'القرارة', cost: 500 }
   ];
 
   const handleMunicipalityChange = (e) => {
@@ -304,25 +304,25 @@ const AdminOrders = () => {
                                   <label className="text-sm text-gray-400 mb-2 block">
                                       البلدية / العنوان
                                     </label>
-                                    {editData.wilaya === 'غرداية' && (
-                                      <select
-                                        value={ghardaiaMunicipalities.some(m => m.name === editData.address) ? editData.address : 'custom'}
-                                        onChange={(e) => handleMunicipalityChange(e.target.value)}
-                                        className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-2 text-brand-cream mb-2"
-                                      >
-                                        <option value="custom" disabled>اختر البلدية...</option>
-                                        {ghardaiaMunicipalities.map((m, idx) => (
-                                            <option key={idx} value={m.name}>{m.name} ({m.cost} دج)</option>
-                                        ))}
-                                        <option value="custom">أخرى (كتابة يدوية)</option>
-                                      </select>
-                                    )}
-                                    <input
-                                      type="text"
-                                      value={editData.address || ''}
-                                    onChange={(e) => setEditData({ ...editData, address: e.target.value })}
-                                    className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-2 text-brand-cream"
-                                  />
+                                    {editData.wilaya === 'غرداية' ? (
+                                        <select
+                                          value={editData.address || ''}
+                                          onChange={(e) => handleMunicipalityChange(e.target.value)}
+                                          className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-2 text-brand-cream"
+                                        >
+                                          <option value="" disabled>اختر البلدية...</option>
+                                          {ghardaiaMunicipalities.map((m, idx) => (
+                                              <option key={idx} value={m.name}>{m.name} ({m.cost} دج)</option>
+                                          ))}
+                                        </select>
+                                      ) : (
+                                        <input
+                                          type="text"
+                                          value={editData.address || ''}
+                                          onChange={(e) => setEditData({ ...editData, address: e.target.value })}
+                                          className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-2 text-brand-cream"
+                                        />
+                                      )}
                                 </div>
                                 <div>
                                   <label className="text-sm text-gray-400 mb-2 block">
