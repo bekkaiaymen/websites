@@ -1,10 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, TrendingUp, DollarSign, ShoppingBag, AlertCircle, Calendar } from 'lucide-react';
+import { LogOut, TrendingUp, DollarSign, ShoppingBag, AlertCircle, Calendar, Plus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AdminNavbar from '../components/AdminNavbar';
 
 const AdminDashboard = () => {
   const [analytics, setAnalytics] = useState(null);
+  const [expenses, setExpenses] = useState([]);
+  const [showExpenseForm, setShowExpenseForm] = useState(false);
+  const [newExpense, setNewExpense] = useState({
+    description: '',
+    amount: '',
+    type: 'Other',
+    date: new Date().toISOString().split('T')[0]
+  });
+  const [addingExpense, setAddingExpense] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -48,6 +57,92 @@ const AdminDashboard = () => {
       setError(err.message || 'حدث خطأ عند تحميل البيانات');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchExpenses = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      
+      let url = `${API_URL}/api/admin/expenses`;
+      if (startDate || endDate) {
+        const params = new URLSearchParams();
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        url += `?${params.toString()}`;
+      }
+
+      const res = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setExpenses(data);
+      }
+    } catch (err) {
+      console.error('Error fetching expenses:', err);
+    }
+  };
+
+  const handleAddExpense = async (e) => {
+    e.preventDefault();
+    if (!newExpense.description || !newExpense.amount || !newExpense.date) return;
+    
+    setAddingExpense(true);
+    try {
+      const token = localStorage.getItem('adminToken');
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      
+      const res = await fetch(`${API_URL}/api/admin/expenses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...newExpense,
+          amount: Number(newExpense.amount)
+        })
+      });
+
+      if (!res.ok) throw new Error('فشل إضافة المصروف');
+      
+      setNewExpense({
+        description: '',
+        amount: '',
+        type: 'Other',
+        date: new Date().toISOString().split('T')[0]
+      });
+      setShowExpenseForm(false);
+      
+      fetchAnalytics();
+      fetchExpenses();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setAddingExpense(false);
+    }
+  };
+
+  const handleDeleteExpense = async (id) => {
+    if (!window.confirm('هل أنت متأكد من حذف هذا المصروف؟')) return;
+    
+    try {
+      const token = localStorage.getItem('adminToken');
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      
+      const res = await fetch(`${API_URL}/api/admin/expenses/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!res.ok) throw new Error('فشل حذف المصروف');
+      
+      fetchAnalytics();
+      fetchExpenses();
+    } catch (err) {
+      setError(err.message);
     }
   };
 
