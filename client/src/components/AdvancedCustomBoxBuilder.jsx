@@ -49,8 +49,9 @@ const AdvancedCustomBoxBuilder = ({ categoryFilter = null, preselectedProduct, c
   };
 
   const activeCategory = categoryFilter || localCategoryFilter;
-  const filteredProducts = activeCategory 
+  const filteredProducts = activeCategory
     ? products.filter(p => p.category?._id === activeCategory || p.category === activeCategory)
+    : products;
 
   const calculateTotal = () => {
     return Object.entries(selectedItems).reduce((total, [productId, count]) => {
