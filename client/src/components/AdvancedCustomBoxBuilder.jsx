@@ -29,7 +29,7 @@ const AdvancedCustomBoxBuilder = ({ categoryFilter = null, preselectedProduct, c
     const fetchData = async () => {
       try {
         const catsData = await getCategories();
-        const prodsData = await getProducts(categoryFilter || localCategoryFilter);
+        const prodsData = await getProducts(); // Always fetch all products
         setCategories(catsData);
         setProducts(prodsData);
       } catch (error) {
@@ -37,7 +37,7 @@ const AdvancedCustomBoxBuilder = ({ categoryFilter = null, preselectedProduct, c
       }
     };
     fetchData();
-  }, [categoryFilter, localCategoryFilter]);
+  }, []); // Run once on mount
 
   const handleBudgetSubmit = (e) => {
     e.preventDefault();
@@ -50,8 +50,7 @@ const AdvancedCustomBoxBuilder = ({ categoryFilter = null, preselectedProduct, c
 
   const activeCategory = categoryFilter || localCategoryFilter;
   const filteredProducts = activeCategory 
-    ? products.filter(p => p.category?._id === activeCategory)
-    : products;
+    ? products.filter(p => p.category?._id === activeCategory || p.category === activeCategory)
 
   const calculateTotal = () => {
     return Object.entries(selectedItems).reduce((total, [productId, count]) => {
@@ -150,9 +149,9 @@ ${notes || 'لا يوجد'}
   };
 
   return (
-    <section id="custom-box" className="py-12 md:py-20 bg-gradient-to-b from-[#140d0b] to-[#1a120f] relative overflow-hidden">
+    <section id="custom-box" className="py-12 md:py-20 bg-gradient-to-b from-[#140d0b] to-[#1a120f] relative">
       {/* Decorative background */}
-      <div className="absolute inset-0 opacity-10">
+      <div className="absolute inset-0 opacity-10 overflow-hidden pointer-events-none">
         <div className="absolute top-0 -left-40 w-80 h-80 bg-brand-gold rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 -right-40 w-80 h-80 bg-brand-gold rounded-full blur-3xl"></div>
       </div>
