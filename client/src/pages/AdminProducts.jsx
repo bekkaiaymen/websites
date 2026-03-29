@@ -370,8 +370,10 @@ const AdminProducts = () => {
             <table className="w-full">
               <thead className="bg-brand-gold/10 border-b border-brand-gold/30">
                 <tr>
+                  <th className="px-6 py-4 text-right text-sm font-semibold text-brand-cream">الصورة</th>
                   <th className="px-6 py-4 text-right text-sm font-semibold text-brand-cream">الاسم بالعربية</th>
                   <th className="px-6 py-4 text-right text-sm font-semibold text-brand-cream">الاسم</th>
+                  <th className="px-6 py-4 text-right text-sm font-semibold text-brand-cream">الفئة</th>
                   <th className="px-6 py-4 text-right text-sm font-semibold text-brand-cream">سعر البيع</th>
                   <th className="px-6 py-4 text-right text-sm font-semibold text-brand-cream">سعر الشراء</th>
                   <th className="px-6 py-4 text-right text-sm font-semibold text-brand-cream">الربح للوحدة</th>
@@ -386,6 +388,40 @@ const AdminProducts = () => {
 
                   return (
                     <tr key={product._id} className="hover:bg-brand-gold/5 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {isEditing ? (
+                          <div className="flex flex-col gap-2 relative">
+                            {imagePreview ? (
+                              <div className="relative w-16 h-16">
+                                <img src={imagePreview} alt="Preview" className="w-16 h-16 object-cover rounded" />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setImagePreview(null);
+                                    setEditData({ ...editData, image: null });
+                                  }}
+                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 w-5 h-5 flex items-center justify-center text-xs"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ) : (
+                              <label className="cursor-pointer flex flex-col items-center justify-center w-16 h-16 border-2 border-dashed border-brand-gold/50 rounded bg-brand-dark/50 hover:bg-brand-dark transition-colors">
+                                <span className="text-[10px] text-brand-gold">صورة</span>
+                                <input type="file" className="hidden" accept="image/*" onChange={handleEditImageChange} />
+                              </label>
+                            )}
+                          </div>
+                        ) : (
+                          product.image ? (
+                            <img src={product.image} alt={product.nameAr || 'Product Image'} className="w-16 h-16 object-cover rounded" />
+                          ) : (
+                            <div className="w-16 h-16 bg-brand-dark/50 flex items-center justify-center rounded">
+                              <ImageIcon className="w-6 h-6 text-gray-400" />
+                            </div>
+                          )
+                        )}
+                      </td>
                       <td className="px-6 py-4 text-sm text-brand-cream">
                         {isEditing ? (
                           <input
@@ -408,6 +444,22 @@ const AdminProducts = () => {
                           />
                         ) : (
                           product.name
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-400">
+                        {isEditing ? (
+                          <select
+                            value={editData.category || ''}
+                            onChange={(e) => setEditData({ ...editData, category: e.target.value })}
+                            className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded p-2 text-brand-cream focus:border-brand-gold outline-none"
+                          >
+                            <option value="">اختر الفئة</option>
+                            {categories.map(cat => (
+                              <option key={cat._id} value={cat._id}>{cat.nameAr}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          product.category?.nameAr || 'بدون فئة'
                         )}
                       </td>
                       <td className="px-6 py-4 text-sm text-brand-cream font-semibold">

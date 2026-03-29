@@ -309,23 +309,33 @@ app.put('/api/products/:id', authenticateToken, async (req, res) => {
       active
     } = req.body;
 
+    const updateData = {
+      name,
+      nameAr,
+      price,
+      cost,
+      description,
+      descriptionAr,
+      stock,
+      local,
+      national,
+      premium,
+      active
+    };
+
+    if (category && category !== '') {
+      updateData.category = category;
+    } else if (category === '') {
+      updateData.category = null;
+    }
+
+    if (image !== undefined) {
+      updateData.image = image;
+    }
+
     const product = await Product.findByIdAndUpdate(
       id,
-      {
-        name,
-        nameAr,
-        category,
-        price,
-        cost,
-        description,
-        descriptionAr,
-        image,
-        stock,
-        local,
-        national,
-        premium,
-        active
-      },
+      updateData,
       { new: true }
     ).populate('category');
 
