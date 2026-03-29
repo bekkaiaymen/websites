@@ -69,7 +69,9 @@ const AdminOrders = () => {
       customerName: order.customerName || '',
       customerPhone: order.customerPhone || '',
       wilaya: order.wilaya || '',
-      address: order.address || '',
+        address: order.address || '',
+        notes: order.notes || '',
+
       total: order.total || order.budget || 0,
       productName: order.productName || ''
     });
@@ -276,8 +278,17 @@ const AdminOrders = () => {
                                     onChange={(e) => setEditData({ ...editData, productName: e.target.value })}
                                     className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-2 text-brand-cream"
                                   />
-                                </div>
-                                <div>
+                                </div>                                  <div className="md:col-span-4">
+                                    <label className="text-sm text-yellow-500/80 mb-2 block font-bold">
+                                      📍 معلومات إضافية للموصل (عنوان دقيق أو توجيهات)
+                                    </label>
+                                    <textarea
+                                      value={editData.notes || ''}
+                                      onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
+                                      className="w-full bg-[#0f0a08] border border-yellow-500/30 rounded-lg p-2 text-brand-cream min-h-[80px]"
+                                      placeholder="مثال: بجانب الصيدلية، الطابق الثاني، الاتصال قبل نصف ساعة..."
+                                    />
+                                  </div>                                <div>
                                   <label className="text-sm text-gray-400 mb-2 block">
                                     السعر الإجمالي (د.ج)
                                   </label>
@@ -369,8 +380,16 @@ const AdminOrders = () => {
                             <div className="text-xs text-brand-gold">{order.productName || order.orderType}</div>
                           </td>
                           <td className="p-3 text-brand-cream">{order.customerPhone || 'غير محدد'}</td>
-                          <td className="p-3 text-gray-400 text-xs max-w-xs truncate">
-                            {order.wilaya ? `${order.wilaya} - ` : ''}{order.address || 'غير محدد'}
+                            <td className="p-3 text-sm max-w-xs whitespace-normal breaks-words">
+                              <div className="text-gray-300 mb-1">
+                                {order.wilaya ? `${order.wilaya} - ` : ''}{order.address || 'غير محدد'}
+                              </div>
+                              {order.notes && (
+                                <div className="text-xs bg-yellow-500/20 text-yellow-300 p-2 rounded-md border border-yellow-500/30">
+                                  <strong>📍 ملاحظات للتوصيل:</strong><br/>
+                                  {order.notes}
+                                </div>
+                              )}
                           </td>
                           <td className="p-3 text-brand-gold font-bold">{order.total || order.budget || 0} د.ج</td>
                         <td className="p-3 text-brand-gold">
