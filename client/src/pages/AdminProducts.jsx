@@ -67,9 +67,24 @@ const AdminProducts = () => {
       nameAr: product.nameAr || '',
       price: product.price || '',
       cost: product.cost || '',
-      category: product.category || '',
+      category: product.category?._id || product.category || '',
       stock: product.stock || ''
     });
+    // Set image file and preview state to empty initially when editing
+    setImageFile(null);
+    setImagePreview(product.image || null);
+  };
+
+  const handleEditImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Convert to base64 immediately for sending to the server
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditData({ ...editData, image: reader.result }); // Set the base64 string to be sent
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleImageChange = (e) => {
