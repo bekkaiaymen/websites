@@ -436,19 +436,29 @@ app.put('/api/admin/orders/:id/status', authenticateToken, async (req, res) => {
   }
 });
 
-// PUT /api/orders/:id - Update order (status and delivery cost)
+// PUT /api/orders/:id - Update order
 app.put('/api/orders/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, deliveryCost } = req.body;
+    const { status, deliveryCost, customerName, customerPhone, wilaya, address, total, notes } = req.body;
 
-    if (!['Pending', 'Confirmed', 'Delivered', 'Returned', 'Cancelled'].includes(status)) {
+    if (status && !['Pending', 'Confirmed', 'Delivered', 'Returned', 'Cancelled'].includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
 
+    const updateData = {};
+    if (status !== undefined) updateData.status = status;
+    if (deliveryCost !== undefined) updateData.deliveryCost = deliveryCost;
+    if (customerName !== undefined) updateData.customerName = customerName;
+    if (customerPhone !== undefined) updateData.customerPhone = customerPhone;
+    if (wilaya !== undefined) updateData.wilaya = wilaya;
+    if (address !== undefined) updateData.address = address;
+    if (total !== undefined) updateData.total = total;
+    if (notes !== undefined) updateData.notes = notes;
+
     const order = await Order.findByIdAndUpdate(
       id,
-      { status, deliveryCost: deliveryCost || 0 },
+      { $set: updateData },
       { new: true }
     );
 

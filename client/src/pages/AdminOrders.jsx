@@ -34,8 +34,14 @@ const AdminOrders = () => {
   const startEdit = (order) => {
     setEditingId(order._id);
     setEditData({
-      status: order.status,
-      deliveryCost: order.deliveryCost || 0
+      status: order.status || '',
+      deliveryCost: order.deliveryCost || 0,
+      customerName: order.customerName || '',
+      customerPhone: order.customerPhone || '',
+      wilaya: order.wilaya || '',
+      address: order.address || '',
+      total: order.total || order.budget || 0,
+      productName: order.productName || ''
     });
   };
 
@@ -181,8 +187,73 @@ const AdminOrders = () => {
                       <>
                         <td colSpan="6" className="p-4">
                           <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div>
+                                  <label className="text-sm text-gray-400 mb-2 block">
+                                    اسم الزبون
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editData.customerName}
+                                    onChange={(e) => setEditData({ ...editData, customerName: e.target.value })}
+                                    className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-2 text-brand-cream"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm text-gray-400 mb-2 block">
+                                    رقم الهاتف
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editData.customerPhone}
+                                    onChange={(e) => setEditData({ ...editData, customerPhone: e.target.value })}
+                                    className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-2 text-brand-cream"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm text-gray-400 mb-2 block">
+                                    الولاية
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editData.wilaya}
+                                    onChange={(e) => setEditData({ ...editData, wilaya: e.target.value })}
+                                    className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-2 text-brand-cream"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm text-gray-400 mb-2 block">
+                                    العنوان
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editData.address}
+                                    onChange={(e) => setEditData({ ...editData, address: e.target.value })}
+                                    className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-2 text-brand-cream"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm text-gray-400 mb-2 block">
+                                    المنتج / الطلب
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editData.productName}
+                                    onChange={(e) => setEditData({ ...editData, productName: e.target.value })}
+                                    className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-2 text-brand-cream"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm text-gray-400 mb-2 block">
+                                    السعر الإجمالي (د.ج)
+                                  </label>
+                                  <input
+                                    type="number"
+                                    value={editData.total}
+                                    onChange={(e) => setEditData({ ...editData, total: parseFloat(e.target.value) || 0 })}
+                                    className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-2 text-brand-cream"
+                                  />
+                                </div>
                                 <label className="text-sm text-gray-400 mb-2 block">
                                   الحالة
                                 </label>
@@ -258,12 +329,15 @@ const AdminOrders = () => {
                       </>
                     ) : (
                       <>
-                        <td className="p-3 text-brand-cream">{order.customerName}</td>
-                        <td className="p-3 text-brand-cream">{order.customerPhone}</td>
-                        <td className="p-3 text-gray-400 text-xs max-w-xs truncate">
-                          {order.customerAddress}
-                        </td>
-                        <td className="p-3 text-brand-gold font-bold">{order.total} دج</td>
+                          <td className="p-3">
+                            <div className="text-brand-cream">{order.customerName || 'غير محدد'}</div>
+                            <div className="text-xs text-brand-gold">{order.productName || order.orderType}</div>
+                          </td>
+                          <td className="p-3 text-brand-cream">{order.customerPhone || 'غير محدد'}</td>
+                          <td className="p-3 text-gray-400 text-xs max-w-xs truncate">
+                            {order.wilaya ? `${order.wilaya} - ` : ''}{order.address || 'غير محدد'}
+                          </td>
+                          <td className="p-3 text-brand-gold font-bold">{order.total || order.budget || 0} د.ج</td>
                         <td className="p-3 text-brand-gold">
                           {order.deliveryCost || 0} دج
                         </td>
