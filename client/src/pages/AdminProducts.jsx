@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Edit, Save, X, Plus, AlertCircle, Trash2 } from 'lucide-react';
+import { Edit, Save, X, Plus, AlertCircle, Trash2, Image as ImageIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AdminNavbar from '../components/AdminNavbar';
 
@@ -19,6 +19,8 @@ const AdminProducts = () => {
     stock: ''
   });
   const [categories, setCategories] = useState([]);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -70,6 +72,19 @@ const AdminProducts = () => {
     });
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      // Convert to base64 for preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSave = async (id) => {
     try {
       const token = localStorage.getItem('adminToken');
@@ -107,6 +122,27 @@ const AdminProducts = () => {
     setEditData({});
   };
 
+  const handleDelete = async (id) => {
+    if (!window.confirm('هل تريد حذف هذا المنتج؟')) return;
+    try {
+      const token = localStorage.getItem('adminToken');
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      
+      const response = await fetch(`${API_URL}/api/products/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        }
+      });
+
+      if (!response.ok) throw new Error('فشل حذف المنتج');
+
+      fetchProducts();
+    } catch (err) {
+      setError(err.message || 'حدث خطأ عند حذف المنتج');
+    }
+  };
+
   const handleAddProduct = async (e) => {
     e.preventDefault();
     try {
@@ -128,7 +164,8 @@ const AdminProducts = () => {
           ...newProduct,
           price: parseFloat(newProduct.price),
           cost: parseFloat(newProduct.cost) || 0,
-          stock: parseInt(newProduct.stock) || 0
+          stock: parseInt(newProduct.stock) || 0,
+          image: imagePreview || null // Send base64 image
         })
       });
 
@@ -142,6 +179,8 @@ const AdminProducts = () => {
         category: '',
         stock: ''
       });
+      setImageFile(null);
+      setImagePreview(null);
       setShowAddForm(false);
       fetchProducts();
       setError('');
@@ -195,6 +234,43 @@ const AdminProducts = () => {
               إضافة منتج جديد
             </h2>
             <form onSubmit={handleAddProduct} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Image Preview */}
+              <div className="lg:col-span-3">
+                {imagePreview ? (
+                  <div className="relative w-32 h-32 mx-auto mb-4">
+                    <img
+                      src={imagePreview}
+                      alt="معاينة"
+                      className="w-full h-full object-cover rounded-lg border border-brand-gold/30"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImageFile(null);
+                        setImagePreview(null);
+                      }}
+                      className="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-brand-gold/30 rounded-lg cursor-pointer bg-brand-gold/5 hover:bg-brand-gold/10 transition-colors">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <ImageIcon className="w-8 h-8 text-brand-gold mb-2" />
+                      <p className="text-sm text-brand-gold mb-1">اضغط لاختيار صورة</p>
+                      <p className="text-xs text-gray-400">PNG أو JPG</p>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+
               <input
                 type="text"
                 placeholder="الاسم بالإنجليزية"
@@ -377,12 +453,20 @@ const AdminProducts = () => {
                             </button>
                           </div>
                         ) : (
-                          <button
-                            onClick={() => handleEdit(product)}
-                            className="text-brand-gold hover:text-brand-gold-light"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEdit(product)}
+                              className="text-brand-gold hover:text-brand-gold-light"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(product._id)}
+                              className="text-red-400 hover:text-red-300"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>
