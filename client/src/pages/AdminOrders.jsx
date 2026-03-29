@@ -61,6 +61,43 @@ const AdminOrders = () => {
     }
   };
 
+  const ghardaiaMunicipalities = [
+    { name: 'غرداية', cost: 200 },
+    { name: 'بونورة', cost: 200 },
+    { name: 'بني يزقن', cost: 200 },
+    { name: 'القرارة', cost: 600 },
+    { name: 'بريان', cost: 500 },
+    { name: 'زلفانة', cost: 500 },
+    { name: 'المنيعة', cost: 1000 },
+    { name: 'العطف', cost: 350 },
+    { name: 'متليلي', cost: 500 },
+    { name: 'سبسب', cost: 600 },
+    { name: 'الضاية بن ضحوة', cost: 400 },
+    { name: 'تغردايت', cost: 200 },
+    { name: 'حاسي لفحل', cost: 800 },
+    { name: 'منصورة', cost: 800 }
+  ];
+
+  const handleMunicipalityChange = (e) => {
+    const selectedMuni = e.target.value;
+    const muniData = ghardaiaMunicipalities.find((m) => m.name === selectedMuni);
+    let newCost = muniData ? muniData.cost : 0;
+    
+    if (editData.status === 'Delivered') {
+      newCost = newCost;
+    } else if (editData.status === 'Returned') {
+      newCost = newCost / 2;
+    } else {
+      newCost = 0;
+    }
+    
+    setEditData({
+      ...editData,
+      address: selectedMuni,
+      deliveryCost: newCost
+    });
+  };
+
   const startEdit = (order) => {
     setEditingId(order._id);
     setEditData({
@@ -68,7 +105,7 @@ const AdminOrders = () => {
       deliveryCost: order.deliveryCost || 0,
       customerName: order.customerName || '',
       customerPhone: order.customerPhone || '',
-      wilaya: order.wilaya || '',
+        wilaya: order.wilaya || 'غرداية',
         address: order.address || '',
         notes: order.notes || '',
 
@@ -77,16 +114,22 @@ const AdminOrders = () => {
     });
   };
 
-  const calculateDeliveryCost = (status, originalCost) => {
-    if (status === 'Delivered') return originalCost;
-    if (status === 'Returned') return originalCost * 0.5;
+  const calculateDeliveryCost = (status, originalCost, selectedMunicipality = null) => {
+    let baseCost = originalCost;
+    if (editData.wilaya === 'غرداية') {
+      const muni = ghardaiaMunicipalities.find(m => m.name === selectedMunicipality || m.name === editData.address);
+      if (muni) baseCost = muni.cost;
+    }
+    
+    if (status === 'Cancelled') return 0;
+    if (status === 'Returned') return baseCost * 0.5;
     if (status === 'Pending') return 0;
-    return originalCost;
+    return baseCost;
   };
 
   const handleStatusChange = (status) => {
     const order = orders.find(o => o._id === editingId);
-    const newCost = calculateDeliveryCost(status, order.deliveryCost);
+    const newCost = calculateDeliveryCost(status, order.deliveryCost, editData.address);
     setEditData({
       ...editData,
       status,
@@ -259,11 +302,24 @@ const AdminOrders = () => {
                                 </div>
                                 <div>
                                   <label className="text-sm text-gray-400 mb-2 block">
-                                    العنوان
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={editData.address}
+                                      البلدية / العنوان
+                                    </label>
+                                    {editData.wilaya === 'غرداية' && (
+                                      <select
+                                        value={ghardaiaMunicipalities.some(m => m.name === editData.address) ? editData.address : 'custom'}
+                                        onChange={(e) => handleMunicipalityChange(e.target.value)}
+                                        className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-2 text-brand-cream mb-2"
+                                      >
+                                        <option value="custom" disabled>اختر البلدية...</option>
+                                        {ghardaiaMunicipalities.map((m, idx) => (
+                                            <option key={idx} value={m.name}>{m.name} ({m.cost} دج)</option>
+                                        ))}
+                                        <option value="custom">أخرى (كتابة يدوية)</option>
+                                      </select>
+                                    )}
+                                    <input
+                                      type="text"
+                                      value={editData.address || ''}
                                     onChange={(e) => setEditData({ ...editData, address: e.target.value })}
                                     className="w-full bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-2 text-brand-cream"
                                   />
