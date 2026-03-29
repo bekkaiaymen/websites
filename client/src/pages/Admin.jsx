@@ -20,7 +20,7 @@ const Admin = () => {
     try {
       const res = await fetch(buildApiUrl('/api/orders'), {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
       const data = await res.json();
@@ -68,7 +68,8 @@ const Admin = () => {
             </div>
             <button
                onClick={() => {
-                 localStorage.removeItem('token');
+                 localStorage.removeItem('adminToken');
+                 localStorage.removeItem('adminUser');
                  window.location.href = '/admin/login';
                }}
                className="flex items-center gap-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 px-4 py-2 rounded-lg transition-colors"
