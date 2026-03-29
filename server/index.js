@@ -474,14 +474,16 @@ app.get('/api/admin/analytics/profit', authenticateToken, async (req, res) => {
 
     res.json({
       revenue,
-      costs,
+      totalCosts: costs,
       losses,
-      expenses: totalExpenses,
+      totalExpenses,
       profit,
       orderCount: orders.length,
       deliveredCount: orders.filter(o => o.status === 'Delivered').length,
       returnedCount: orders.filter(o => o.status === 'Returned').length,
-      period: { start, end }
+      pendingCount: orders.filter(o => o.status === 'Pending').length,
+      startDate: startDate || null,
+      endDate: endDate || null
     });
   } catch (error) {
     console.error('Error calculating profit:', error);
