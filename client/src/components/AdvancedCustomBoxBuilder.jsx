@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Package, Check, Loader2, Plus, Minus, X, ChevronRight } from 'lucide-react';
-import { getCategories, getProducts } from '../api';
+import { getCategories, getProducts, buildApiUrl } from '../api';
 
 const AdvancedCustomBoxBuilder = ({ categoryFilter = null, preselectedProduct, clearPreselected }) => {
   // Steps management
@@ -107,7 +107,7 @@ const AdvancedCustomBoxBuilder = ({ categoryFilter = null, preselectedProduct, c
 
     // 1. CRITICAL FIX: Save to DB FIRST
     try {
-      const response = await fetch('/api/orders', {
+      const response = await fetch(buildApiUrl('/api/orders'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderData)
