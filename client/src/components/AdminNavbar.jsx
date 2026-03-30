@@ -86,6 +86,20 @@ const AdminNavbar = ({ onLogout }) => {
               <span className="text-sm">الفئات</span>
             </Link>
           )}
+
+          {!isDelivery && (
+            <Link
+              to="/admin/hint-settings"
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                isActive('/admin/hint-settings')
+                  ? 'bg-brand-gold text-brand-dark'
+                  : 'text-gray-400 hover:text-brand-cream bg-brand-gold/10 hover:bg-brand-gold/20'
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+              <span className="text-sm">إعدادات التلميحات</span>
+            </Link>
+          )}
         </div>
       </div>
     </nav>

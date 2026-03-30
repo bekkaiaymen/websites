@@ -7,6 +7,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminProducts from './pages/AdminProducts';
 import AdminCategories from './pages/AdminCategories';
 import AdminOrders from './pages/AdminOrders';
+import AdminHintSettings from './pages/AdminHintSettings';
 import CampaignLanding from './pages/CampaignLanding';
 import HintCampaign from './pages/HintCampaign';
 import HusbandCheckout from './pages/HusbandCheckout';
@@ -26,6 +27,7 @@ const App = () => {
         <Route path="/admin/orders" element={<ProtectedRoute element={<AdminOrders />} />} />
         <Route path="/admin/products" element={<ProtectedRoute element={<AdminProducts />} allowedRoles={['admin', 'superadmin']} />} />
         <Route path="/admin/categories" element={<ProtectedRoute element={<AdminCategories />} allowedRoles={['admin', 'superadmin']} />} />
+        <Route path="/admin/hint-settings" element={<ProtectedRoute element={<AdminHintSettings />} allowedRoles={['admin', 'superadmin']} />} />
       </Routes>
     </Router>
   );
