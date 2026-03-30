@@ -36,7 +36,7 @@ const HintCampaign = () => {
       if (budget) params.append('budget', budget);
       if (flavors.length > 0) params.append('flavors', flavors.join(','));
       
-      const dynamicLink = `${baseUrl}/?${params.toString()}`;
+      const dynamicLink = `${baseUrl}/surprise?${params.toString()}`;
 
       // 3. Open WhatsApp with pre-filled message
       const hintMessage = `حبيبي، سخفت على هذي من عند علي بابا 🥺❤️ راني صممت البوكس على ذوقي:\nالميزانية: ${budget ? budget + ' د.ج' : 'حسب ذوقك'}\nالنكهات: ${flavors.length > 0 ? flavors.join('، ') : 'كلش بنين'}.\n\nادخل لهذا الرابط تلقى الطلبية واجدة، غير كليكي وابعثهالهم وخليهم يديروهالي مفاجأة للدار! 👇🎁\n${dynamicLink}`;
@@ -47,7 +47,7 @@ const HintCampaign = () => {
     } catch (error) {
       console.error('Error sending hint:', error);
       // Fallback: Still open WhatsApp even if tracking fails (Zero Friction rule)
-      const fallbackLink = window.location.origin;
+      const fallbackLink = `${baseUrl}/surprise?budget=${budget}&flavors=${flavors.join(',')}`;
       const hintMessage = `حبيبي، سخفت على هذي من عند علي بابا 🥺❤️ راني صممت البوكس على ذوقي:\nالميزانية: ${budget ? budget + ' د.ج' : 'حسب ذوقك'}\nالنكهات: ${flavors.length > 0 ? flavors.join('، ') : 'كلش بنين'}.\n\nادخل لهذا الرابط تلقى الطلبية واجدة، غير كليكي وابعثهالهم وخليهم يديروهالي مفاجأة للدار! 👇🎁\n${fallbackLink}`;
       const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(hintMessage)}`;
       window.open(whatsappUrl, '_blank');
@@ -87,7 +87,7 @@ const HintCampaign = () => {
                 <span className="flex items-center justify-center w-7 h-7 rounded-full bg-[#bf953f]/10 text-[#bf953f] text-sm">1</span>
                 حددي الميزانية (د.ج)
               </h3>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-3 mb-3">
                 {budgetOptions.map((opt) => (
                   <button
                     key={opt}
@@ -101,6 +101,17 @@ const HintCampaign = () => {
                     {opt}
                   </button>
                 ))}
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-gray-500 text-sm md:text-base font-medium whitespace-nowrap">أو ميزانية أخرى:</span>
+                <input 
+                  type="number" 
+                  min="0"
+                  placeholder="أدخلي المبلغ هنا..." 
+                  value={budgetOptions.includes(budget) ? '' : budget}
+                  onChange={(e) => setBudget(e.target.value)}
+                  className="flex-1 bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-2.5 outline-none focus:border-[#bf953f] focus:bg-white transition-all text-lg font-bold text-[#1f0404]"
+                />
               </div>
             </div>
 

@@ -9,6 +9,7 @@ import AdminCategories from './pages/AdminCategories';
 import AdminOrders from './pages/AdminOrders';
 import CampaignLanding from './pages/CampaignLanding';
 import HintCampaign from './pages/HintCampaign';
+import HusbandCheckout from './pages/HusbandCheckout';
 import ProtectedRoute from './components/ProtectedRoute';
 
 const App = () => {
@@ -18,6 +19,7 @@ const App = () => {
         <Route path="/" element={<Home />} />
         <Route path="/offer" element={<CampaignLanding />} />
         <Route path="/hint" element={<HintCampaign />} />
+        <Route path="/surprise" element={<HusbandCheckout />} />
         <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={<ProtectedRoute element={<AdminDashboard />} allowedRoles={['admin', 'superadmin']} />} />
