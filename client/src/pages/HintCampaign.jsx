@@ -225,7 +225,8 @@ const HintCampaign = () => {
 
                 {settings.customAddons.length > 0 ? (
                   settings.customAddons.map((addon, index) => {
-                    const optionsArray = addon.options.split(',').map(o => o.trim()).filter(o => o);
+                      const optStr = Array.isArray(addon.options) ? addon.options.join(',') : (addon.options || '');
+                      const optionsArray = optStr.split(',').map(o => o.trim()).filter(o => o);
                     return (
                       <div key={index}>
                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
