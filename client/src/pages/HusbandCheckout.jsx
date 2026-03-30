@@ -26,8 +26,9 @@ const HusbandCheckout = () => {
           orderType: 'Custom Box',
           budget: finalBudgetNum,
           total: finalBudgetNum,
-          flavors: flavors.includes('،') ? flavors.split('،') : [flavors],
-          notes: 'طلب عبر صفحة التلميح (الزوج)'
+          flavors: [flavors], // Wrapping inside array to match AdvancedCustomBoxBuilder logic
+          notes: 'طلب عبر صفحة التلميح (الزوج)',
+          productName: `بوكس السعادة - تلميح (${finalBudgetNum} دج)`
         })
       });
     } catch (error) {
