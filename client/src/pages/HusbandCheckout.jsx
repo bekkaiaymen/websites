@@ -8,11 +8,37 @@ const HusbandCheckout = () => {
   
   const [editedBudget, setEditedBudget] = useState(initialBudget.replace('د.ج', '').trim());
 
-  const handleOrderClick = () => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleOrderClick = async () => {
+    setIsLoading(true);
+    const finalBudgetNum = parseInt(editedBudget.replace(/\D/g, '')) || 0;
     const finalBudget = editedBudget ? `${editedBudget} د.ج` : 'غير محدد';
-    const message = `مرحباً، أريد تأكيد طلب "بوكس السعادة" كهدية 🎁.\nالميزانية المحددة: ${finalBudget}\nالنكهات المختارة: ${flavors}\nأريد ترتيب التوصيل والمفاجأة!`;
-    const whatsappUrl = `https://wa.me/213664021599?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
+    
+    // Save order to the database first
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/orders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderType: 'Custom Box',
+          budget: finalBudgetNum,
+          total: finalBudgetNum,
+          flavors: flavors.includes('،') ? flavors.split('،') : [flavors],
+          notes: 'طلب عبر صفحة التلميح (الزوج)'
+        })
+      });
+    } catch (error) {
+      console.error('Error saving order to dashboard:', error);
+    } finally {
+      setIsLoading(false);
+      // Always open WhatsApp regardless of error
+      const message = `مرحباً، وصلني هذا التلميح السعيد وأريد تأكيد طلب "بوكس السعادة" كهدية 🎁.\nالميزانية المحددة: ${finalBudget}\nالنكهات المختارة: ${flavors}\nأريد ترتيب التوصيل والمفاجأة!`;
+      const whatsappUrl = `https://wa.me/213664021599?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank');
+    }
   };
 
   return (
@@ -54,10 +80,13 @@ const HusbandCheckout = () => {
 
           <button 
             onClick={handleOrderClick}
-            className="w-full group relative overflow-hidden flex items-center justify-center gap-3 bg-[#bf953f] text-[#1f0404] py-4 px-6 rounded-2xl font-black text-xl transition-transform duration-300 hover:scale-[1.02] shadow-xl shadow-[#bf953f]/40"
+            disabled={isLoading}
+            className="w-full group relative overflow-hidden flex items-center justify-center gap-3 bg-[#bf953f] text-[#1f0404] py-4 px-6 rounded-2xl font-black text-xl transition-transform duration-300 hover:scale-[1.02] shadow-xl shadow-[#bf953f]/40 disabled:opacity-70"
           >
-            <span className="relative z-10">أكمل الطلبية للمحل عبر واتساب</span>
-            <svg className="w-6 h-6 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            <span className="relative z-10">{isLoading ? 'جاري التحويل...' : 'أكمل الطلبية للمحل عبر واتساب'}</span>
+            {!isLoading && (
+              <svg className="w-6 h-6 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            )}
           </button>
           <p className="mt-4 text-center text-sm font-light text-gray-400">سيتم إرسال تفاصيل الطلب مباشرة إلى واتساب المحل لتجهيزه</p>
         </div>
