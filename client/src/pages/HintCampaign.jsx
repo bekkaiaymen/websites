@@ -69,15 +69,15 @@ const HintCampaign = () => {
         finalFlavorsStr = customParts.join(' | ');
       }
 
-      try {
-        await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/hints`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ budget: finalBudget, flavors: finalFlavorsStr ? [finalFlavorsStr] : [] })
-        });
-      } catch (e) { console.error('Error recording hint log', e); }
+      // Fire and forget to avoid delaying the user or popup blockers
+      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/hints`, {
+        method: 'POST',
+        keepalive: true,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ budget: finalBudget, flavors: finalFlavorsStr ? [finalFlavorsStr] : [] })
+      }).catch(e => console.error('Error recording hint log', e));
 
       const baseUrl = window.location.origin;
       const params = new URLSearchParams();
@@ -96,15 +96,15 @@ const HintCampaign = () => {
       }
       
       const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(hintMessage)}`;
-      window.open(whatsappUrl, '_blank');
-      
+      window.location.href = whatsappUrl;
+
     } catch (error) {
       console.error('Error sending hint:', error);
       const baseUrl = window.location.origin;
       const fallbackLink = `${baseUrl}/surprise?budget=${budget}&flavors=${flavors.join(',')}`;
       const hintMessage = `حبيبي، سخفت على هذي من عند علي بابا 🥺❤️\nادخل لهذا الرابط تلقى الطلبية واجدة، غير كليكي وابعثهالهم وخليهم يديروهالي مفاجأة للدار! 👇🎁\n${fallbackLink}`;
       const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(hintMessage)}`;
-      window.open(whatsappUrl, '_blank');
+      window.location.href = whatsappUrl;
     } finally {
       setIsLoading(false);
     }
