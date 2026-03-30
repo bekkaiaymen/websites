@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../api';
 import AdminNavbar from '../components/AdminNavbar';
 import { Plus, Trash2, Save, Loader } from 'lucide-react';
 
@@ -9,17 +8,20 @@ const AdminHintSettings = ({ onLogout }) => {
   const [settings, setSettings] = useState({ customAddons: [], readyBoxes: [] });
   const [message, setMessage] = useState('');
 
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
   useEffect(() => {
     fetchSettings();
   }, []);
 
   const fetchSettings = async () => {
     try {
-      const res = await api.get('/hint-settings');
-      if (res.data) {
+      const res = await fetch(`${API_URL}/api/hint-settings`);
+      if (res.ok) {
+        const data = await res.json();
         setSettings({
-            customAddons: res.data.customAddons || [],
-            readyBoxes: res.data.readyBoxes || []
+            customAddons: data.customAddons || [],
+            readyBoxes: data.readyBoxes || []
         });
       }
     } catch (err) {
@@ -34,8 +36,21 @@ const AdminHintSettings = ({ onLogout }) => {
     setSaving(true);
     setMessage('');
     try {
-      await api.put('/admin/hint-settings', settings);
-      setMessage('تم حفظ الإعدادات بنجاح!');
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch(`${API_URL}/api/admin/hint-settings`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(settings)
+      });
+      
+      if (res.ok) {
+        setMessage('تم حفظ الإعدادات بنجاح!');
+      } else {
+        setMessage('حدث خطأ أثناء الحفظ.');
+      }
     } catch (err) {
       console.error(err);
       setMessage('حدث خطأ أثناء الحفظ.');

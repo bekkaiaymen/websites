@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../api';
 
 const HintCampaign = () => {
   const [budget, setBudget] = useState('');
@@ -15,11 +14,13 @@ const HintCampaign = () => {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const res = await api.get('/hint-settings');
-        if (res.data) {
+        const fetchUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        const res = await fetch(`${fetchUrl}/api/hint-settings`);
+        if (res.ok) {
+          const data = await res.json();
           setSettings({
-            customAddons: res.data.customAddons || [],
-            readyBoxes: res.data.readyBoxes || []
+            customAddons: data.customAddons || [],
+            readyBoxes: data.readyBoxes || []
           });
         }
       } catch (e) {
