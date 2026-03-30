@@ -647,4 +647,40 @@ app.get('/api/admin/hints/count', authenticateToken, async (req, res) => {
   }
 });
 
+const HintSettings = require('./models/HintSettings');
+
+// GET /api/hint-settings - Fetch hint page config
+app.get('/api/hint-settings', async (req, res) => {
+  try {
+    let settings = await HintSettings.findOne();
+    if (!settings) {
+      settings = new HintSettings({ customAddons: [], readyBoxes: [] });
+      await settings.save();
+    }
+    res.json(settings);
+  } catch (error) {
+    console.error('Error fetching hint settings:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PUT /api/admin/hint-settings - Update hint page config
+app.put('/api/admin/hint-settings', authenticateToken, async (req, res) => {
+  try {
+    const { customAddons, readyBoxes } = req.body;
+    let settings = await HintSettings.findOne();
+    if (!settings) {
+      settings = new HintSettings({ customAddons, readyBoxes });
+    } else {
+      settings.customAddons = customAddons;
+      settings.readyBoxes = readyBoxes;
+    }
+    await settings.save();
+    res.json(settings);
+  } catch (error) {
+    console.error('Error updating hint settings:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
