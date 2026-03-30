@@ -1,13 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 const HusbandCheckout = () => {
   const [searchParams] = useSearchParams();
-  const budget = searchParams.get('budget') || 'غير محدد';
+  const initialBudget = searchParams.get('budget') || 'غير محدد';
   const flavors = searchParams.get('flavors') || 'غير محدد';
+  
+  const [editedBudget, setEditedBudget] = useState(initialBudget.replace('د.ج', '').trim());
 
   const handleOrderClick = () => {
-    const message = `مرحباً، وصلني تلميح من زوجتي وأريد تأكيد طلب "بوكس السعادة" كهدية لها 🎁.\nالميزانية المحددة: ${budget} ${budget !== 'غير محدد' && !budget.toString().includes('د.ج') ? 'د.ج' : ''}\nالنكهات المختارة: ${flavors}\nأريد ترتيب التوصيل والمفاجأة!`;
+    const finalBudget = editedBudget ? `${editedBudget} د.ج` : 'غير محدد';
+    const message = `مرحباً، أريد تأكيد طلب "بوكس السعادة" كهدية 🎁.\nالميزانية المحددة: ${finalBudget}\nالنكهات المختارة: ${flavors}\nأريد ترتيب التوصيل والمفاجأة!`;
     const whatsappUrl = `https://wa.me/213664021599?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
@@ -19,22 +22,30 @@ const HusbandCheckout = () => {
           <div className="absolute top-[-20%] right-[-10%] w-32 h-32 rounded-full bg-[#bf953f] blur-[50px] opacity-30"></div>
           <span className="text-5xl mb-4 block relative z-10 animate-bounce">🎁</span>
           <h1 className="text-2xl md:text-3xl font-bold text-white relative z-10 leading-relaxed">
-            وصلك تلميح سعيد من زوجتك!
+            وصلك تلميح سعيد!
           </h1>
         </div>
         
         <div className="p-8">
           <p className="text-center text-gray-600 mb-8 font-medium text-base md:text-lg">
-            لقد صممت زوجتك "بوكس السعادة" المثالي لها وتتمنى أن تفاجئها به... فاجئها ولا تتردد!
+            شخص غالي عليك صمم "بوكس السعادة" المثالي ويتمنى أن تفاجئه به... فاجئه ولا تتردد!
           </p>
 
           <div className="space-y-4 mb-8">
-            <div className="bg-[#fdfbf6] border border-[#bf953f]/30 p-5 rounded-xl flex justify-between items-center shadow-inner">
-              <span className="font-bold text-[#1f0404]">الميزانية المطلوبة:</span>
-              <span className="text-[#bf953f] font-black text-xl">
-                {budget} {budget !== 'غير محدد' && !budget.toString().includes('د.ج') ? 'د.ج' : ''}
-              </span>
+            <div className="bg-[#fdfbf6] border border-[#bf953f]/30 p-5 rounded-xl shadow-inner mb-4">
+              <label className="block font-bold text-[#1f0404] mb-3 text-sm md:text-base">الميزانية المطلوبة (تستطيع تعديلها):</label>
+              <div className="flex items-center gap-2">
+                <input 
+                  type="text" 
+                  value={editedBudget}
+                  onChange={(e) => setEditedBudget(e.target.value)}
+                  placeholder="أدخل الميزانية..."
+                  className="flex-1 bg-white border-2 border-gray-200 rounded-xl px-4 py-2.5 outline-none focus:border-[#bf953f] transition-all text-lg font-bold text-[#bf953f] text-center"
+                />
+                <span className="text-gray-500 font-bold whitespace-nowrap">د.ج</span>
+              </div>
             </div>
+
             <div className="bg-[#fdfbf6] border border-[#bf953f]/30 p-5 rounded-xl flex justify-between items-center shadow-inner">
               <span className="font-bold text-[#1f0404]">النكهات المفضلة:</span>
               <span className="text-gray-700 font-bold text-left shrink-0 max-w-[60%] leading-relaxed">{flavors}</span>
@@ -48,7 +59,7 @@ const HusbandCheckout = () => {
             <span className="relative z-10">أكمل الطلبية للمحل عبر واتساب</span>
             <svg className="w-6 h-6 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
           </button>
-          <p className="mt-4 text-center text-sm font-light text-gray-400">سيتم إرسال تفاصيل الطلب مباشرة إلى رقم المحل لتجهيزه</p>
+          <p className="mt-4 text-center text-sm font-light text-gray-400">سيتم إرسال تفاصيل الطلب مباشرة إلى واتساب المحل لتجهيزه</p>
         </div>
       </div>
     </div>
