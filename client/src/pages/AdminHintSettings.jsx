@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import AdminNavbar from '../components/AdminNavbar';
-import { Plus, Trash2, Save, Loader } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import AdminNavbar from "../components/AdminNavbar";
+import { Plus, Trash2, Save, Loader } from "lucide-react";
 
 const AdminHintSettings = ({ onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState({ customAddons: [], readyBoxes: [] });
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
   useEffect(() => {
     fetchSettings();
@@ -26,7 +26,7 @@ const AdminHintSettings = ({ onLogout }) => {
       }
     } catch (err) {
       console.error(err);
-      setMessage('خطأ في جلب الإعدادات');
+      setMessage("خطأ في جلب الإعدادات");
     } finally {
       setLoading(false);
     }
@@ -34,26 +34,26 @@ const AdminHintSettings = ({ onLogout }) => {
 
   const handleSave = async () => {
     setSaving(true);
-    setMessage('');
+    setMessage("");
     try {
-      const token = localStorage.getItem('adminToken');
+      const token = localStorage.getItem("adminToken");
       const res = await fetch(`${API_URL}/api/admin/hint-settings`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify(settings)
       });
       
       if (res.ok) {
-        setMessage('تم حفظ الإعدادات بنجاح!');
+        setMessage("تم حفظ الإعدادات بنجاح!");
       } else {
-        setMessage('حدث خطأ أثناء الحفظ.');
+        setMessage("حدث خطأ أثناء الحفظ.");
       }
     } catch (err) {
       console.error(err);
-      setMessage('حدث خطأ أثناء الحفظ.');
+      setMessage("حدث خطأ أثناء الحفظ.");
     } finally {
       setSaving(false);
     }
@@ -62,7 +62,7 @@ const AdminHintSettings = ({ onLogout }) => {
   const addCustomAddon = () => {
     setSettings(prev => ({
       ...prev,
-      customAddons: [...prev.customAddons, { name: '', options: '' }]
+      customAddons: [...prev.customAddons, { name: "", options: "" }]
     }));
   };
 
@@ -80,18 +80,29 @@ const AdminHintSettings = ({ onLogout }) => {
   const addReadyBox = () => {
     setSettings(prev => ({
       ...prev,
-      readyBoxes: [...prev.readyBoxes, { name: '', price: 0, description: '', image: '' }]
+      readyBoxes: [...prev.readyBoxes, { name: "", price: 0, description: "", image: "" }]
     }));
   };
 
   const updateReadyBox = (index, field, value) => {
     const newBoxes = [...settings.readyBoxes];
-    if (field === 'price') {
+    if (field === "price") {
       newBoxes[index][field] = Number(value);
     } else {
       newBoxes[index][field] = value;
     }
     setSettings(prev => ({ ...prev, readyBoxes: newBoxes }));
+  };
+
+  const handleReadyBoxImage = (index, e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        updateReadyBox(index, "image", reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const removeReadyBox = (index) => {
@@ -113,32 +124,30 @@ const AdminHintSettings = ({ onLogout }) => {
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-brand-gold">إعدادات حملة التلميحات</h1>
+          <h1 className="text-3xl font-bold text-brand-gold">إعدادات بوكس الهدايا</h1>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 bg-brand-gold text-[#1a120f] px-6 py-2 rounded-lg font-bold hover:bg-yellow-400 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 bg-brand-gold text-black px-6 py-2 rounded-xl font-bold hover:bg-yellow-500 transition-colors disabled:opacity-50"
           >
             {saving ? <Loader className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-            <span>حفظ التعديلات</span>
+            <span>{saving ? "جاري الحفظ..." : "حفظ التغييرات"}</span>
           </button>
         </div>
 
         {message && (
-          <div className="mb-8">
-             <div className={`p-4 rounded-lg text-center ${message.includes('نجاح') ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
-                {message}
-             </div>
+          <div className={`mb-6 p-4 rounded-xl text-center ${message.includes("بنجاح") ? "bg-green-500/20 text-green-400 border border-green-500/20" : "bg-red-500/20 text-red-400 border border-red-500/20"}`}>
+            {message}
           </div>
         )}
 
-        <div className="space-y-12">
+        <div className="space-y-8">
           {/* Custom Addons Section */}
           <section className="bg-black/40 border border-brand-gold/20 p-6 rounded-2xl">
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h2 className="text-2xl font-bold text-brand-gold mb-2">الإضافات المخصصة</h2>
-                <p className="text-gray-400">على سبيل المثال: المكسرات، نوع التغليف، الخ. يمكنك إضافة خيارات مفصولة بفاصلة (,)</p>
+                <p className="text-gray-400">خيارات يمكن للزوج إضافتها للبوكس مثل المكسرات، حلويات...</p>
               </div>
               <button
                 onClick={addCustomAddon}
@@ -158,7 +167,7 @@ const AdminHintSettings = ({ onLogout }) => {
                       <input
                         type="text"
                         value={addon.name}
-                        onChange={(e) => updateCustomAddon(index, 'name', e.target.value)}
+                        onChange={(e) => updateCustomAddon(index, "name", e.target.value)}
                         className="w-full bg-black/50 border border-brand-gold/20 rounded-lg px-4 py-2 focus:outline-none focus:border-brand-gold text-white"
                         placeholder="أدخل اسم الإضافة..."
                       />
@@ -168,7 +177,7 @@ const AdminHintSettings = ({ onLogout }) => {
                       <input
                         type="text"
                         value={addon.options}
-                        onChange={(e) => updateCustomAddon(index, 'options', e.target.value)}
+                        onChange={(e) => updateCustomAddon(index, "options", e.target.value)}
                         className="w-full bg-black/50 border border-brand-gold/20 rounded-lg px-4 py-2 focus:outline-none focus:border-brand-gold text-white"
                         placeholder="كاجو, فستق, لوز..."
                       />
@@ -216,7 +225,7 @@ const AdminHintSettings = ({ onLogout }) => {
                       <input
                         type="text"
                         value={box.name}
-                        onChange={(e) => updateReadyBox(index, 'name', e.target.value)}
+                        onChange={(e) => updateReadyBox(index, "name", e.target.value)}
                         className="w-full bg-black/50 border border-brand-gold/20 rounded-lg px-4 py-2 focus:outline-none focus:border-brand-gold text-white"
                         placeholder="بوكس السعادة، بوكس الملوك..."
                       />
@@ -225,8 +234,8 @@ const AdminHintSettings = ({ onLogout }) => {
                       <label className="block text-sm text-brand-gold mb-1">السعر الثابت (د.ج)</label>
                       <input
                         type="number"
-                        value={box.price || ''}
-                        onChange={(e) => updateReadyBox(index, 'price', e.target.value)}
+                        value={box.price || ""}
+                        onChange={(e) => updateReadyBox(index, "price", e.target.value)}
                         className="w-full bg-black/50 border border-brand-gold/20 rounded-lg px-4 py-2 focus:outline-none focus:border-brand-gold text-white"
                         placeholder="5000"
                         min="0"
@@ -237,20 +246,26 @@ const AdminHintSettings = ({ onLogout }) => {
                       <label className="block text-sm text-brand-gold mb-1">الوصف والمحتويات</label>
                       <textarea
                         value={box.description}
-                        onChange={(e) => updateReadyBox(index, 'description', e.target.value)}
+                        onChange={(e) => updateReadyBox(index, "description", e.target.value)}
                         className="w-full bg-black/50 border border-brand-gold/20 rounded-lg px-4 py-2 focus:outline-none focus:border-brand-gold text-white h-24 resize-none"
                         placeholder="تفاصيل البوكس وماذا يحتوي..."
                       />
                     </div>
                     <div className="md:col-span-2">
-                      <label className="block text-sm text-brand-gold mb-1">رابط الصورة (اختياري)</label>
-                      <input
-                        type="text"
-                        value={box.image || ''}
-                        onChange={(e) => updateReadyBox(index, 'image', e.target.value)}
-                        className="w-full bg-black/50 border border-brand-gold/20 rounded-lg px-4 py-2 focus:outline-none focus:border-brand-gold text-white text-left dir-ltr"
-                        placeholder="https://example.com/image.jpg"
-                      />
+                      <label className="block text-sm text-brand-gold mb-1">صورة البوكس (اختياري)</label>
+                      <div className="flex gap-4 items-center">
+                        {box.image && (
+                          <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-brand-gold/30 shrink-0 bg-black/50">
+                            <img src={box.image} alt="box" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleReadyBoxImage(index, e)}
+                          className="w-full bg-black/50 border border-brand-gold/20 rounded-lg px-4 py-2 focus:outline-none focus:border-brand-gold text-white"
+                        />
+                      </div>
                     </div>
                   </div>
                   <button
