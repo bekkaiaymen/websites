@@ -16,6 +16,7 @@ const AdminDashboard = () => {
   const [addingExpense, setAddingExpense] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [hintsCount, setHintsCount] = useState(0);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const navigate = useNavigate();
@@ -52,6 +53,19 @@ const AdminDashboard = () => {
 
       const data = await response.json();
       setAnalytics(data);
+
+      try {
+        const hintRes = await fetch(`${API_URL}/api/admin/hints/count`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (hintRes.ok) {
+          const hintData = await hintRes.json();
+          setHintsCount(hintData.count);
+        }
+      } catch (e) {
+        console.error('Error fetching hints count', e);
+      }
+
       setError('');
     } catch (err) {
       setError(err.message || 'حدث خطأ عند تحميل البيانات');
@@ -226,7 +240,21 @@ const AdminDashboard = () => {
         ) : analytics ? (
           <>
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+              
+              {/* Hints Count Card */}
+              <div className="bg-gradient-to-br from-purple-900/40 to-purple-900/20 border border-purple-500/30 rounded-lg p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-purple-200 text-sm font-medium">
+                    التلميحات المرسلة
+                  </h3>
+                  <TrendingUp className="w-5 h-5 text-purple-400" />
+                </div>
+                <p className="text-3xl font-bold text-purple-400">
+                  {hintsCount || 0}
+                </p>
+              </div>
+
               {/* Revenue Card */}
               <div className="bg-gradient-to-br from-green-900/40 to-green-900/20 border border-green-500/30 rounded-lg p-6">
                 <div className="flex items-center justify-between mb-3">

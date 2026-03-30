@@ -8,6 +8,7 @@ import AdminProducts from './pages/AdminProducts';
 import AdminCategories from './pages/AdminCategories';
 import AdminOrders from './pages/AdminOrders';
 import CampaignLanding from './pages/CampaignLanding';
+import HintCampaign from './pages/HintCampaign';
 import ProtectedRoute from './components/ProtectedRoute';
 
 const App = () => {
@@ -16,6 +17,7 @@ const App = () => {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/offer" element={<CampaignLanding />} />
+        <Route path="/hint" element={<HintCampaign />} />
         <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={<ProtectedRoute element={<AdminDashboard />} allowedRoles={['admin', 'superadmin']} />} />

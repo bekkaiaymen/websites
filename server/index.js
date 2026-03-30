@@ -7,6 +7,7 @@ const Category = require('./models/Category');
 const Product = require('./models/Product');
 const Admin = require('./models/Admin');
 const Expense = require('./models/Expense');
+const Hint = require('./models/Hint');
 
 require('dotenv').config();
 
@@ -617,6 +618,31 @@ app.delete('/api/admin/expenses/:id', authenticateToken, async (req, res) => {
     res.json({ message: 'Expense deleted' });
   } catch (error) {
     console.error('Error deleting expense:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Hint Campaign Endpoints
+// POST /api/hints - Record a new hint click
+app.post('/api/hints', async (req, res) => {
+  try {
+    const { budget, flavors } = req.body;
+    const hint = new Hint({ budget, flavors });
+    await hint.save();
+    res.status(201).json({ message: 'Hint recorded', hint });
+  } catch (error) {
+    console.error('Error recording hint:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET /api/admin/hints/count - Get total hints sent
+app.get('/api/admin/hints/count', authenticateToken, async (req, res) => {
+  try {
+    const count = await Hint.countDocuments();
+    res.json({ count });
+  } catch (error) {
+    console.error('Error fetching hints count:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
