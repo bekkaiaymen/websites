@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ghardaia-delivery-v2';
+const CACHE_NAME = 'ghardaia-delivery-v3';
 const urlsToCache = [
   '/',
   '/index.html',
