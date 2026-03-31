@@ -214,8 +214,6 @@ const AdminProducts = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsSubmitting(false);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
