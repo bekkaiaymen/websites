@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Edit, Save, X, Plus, AlertCircle, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Edit, Save, X, Plus, AlertCircle, Trash2, Image as ImageIcon , Loader } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AdminNavbar from '../components/AdminNavbar';
 
@@ -7,6 +7,7 @@ const AdminProducts = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
   const [showAddForm, setShowAddForm] = useState(false);
@@ -101,6 +102,8 @@ const AdminProducts = () => {
   };
 
   const handleSave = async (id) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const token = localStorage.getItem('adminToken');
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -131,6 +134,8 @@ const AdminProducts = () => {
     } catch (err) {
       setError(err.message || 'حدث خطأ عند حفظ المنتج');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -162,12 +167,14 @@ const AdminProducts = () => {
 
   const handleAddProduct = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
     try {
       if (!newProduct.name || !newProduct.nameAr || !newProduct.price || !newProduct.category) {
         setError('يرجى ملء جميع الحقول المطلوبة');
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
+      setIsSubmitting(true);
 
       const token = localStorage.getItem('adminToken');
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -183,7 +190,7 @@ const AdminProducts = () => {
           price: parseFloat(newProduct.price),
           cost: parseFloat(newProduct.cost) || 0,
           stock: parseInt(newProduct.stock) || 0,
-          image: imagePreview || null // Send base64 image
+          image: imagePreview || null
         })
       });
 
@@ -205,6 +212,10 @@ const AdminProducts = () => {
     } catch (err) {
       setError(err.message || 'حدث خطأ عند إضافة المنتج');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    } finally {
+      setIsSubmitting(false);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -344,9 +355,17 @@ const AdminProducts = () => {
               <div className="md:col-span-2 lg:col-span-3 flex gap-4">
                 <button
                   type="submit"
-                  className="flex-1 bg-brand-gold text-brand-dark px-6 py-3 rounded-lg font-semibold hover:bg-brand-gold-light transition-colors"
+                  disabled={isSubmitting}
+                  className="flex-1 bg-brand-gold text-brand-dark px-6 py-3 rounded-lg font-semibold hover:bg-brand-gold-light transition-colors flex justify-center items-center disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  إضافة
+                  {isSubmitting ? (
+                    <div className="flex items-center gap-2">
+                      <Loader className="w-5 h-5 animate-spin" />
+                      جاري الإضافة...
+                    </div>
+                  ) : (
+                    'إضافة'
+                  )}
                 </button>
                 <button
                   type="button"
