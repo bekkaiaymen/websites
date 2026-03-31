@@ -108,6 +108,7 @@ const AdminProducts = () => {
       // Validate cost is not negative
       if (parseFloat(editData.cost) < 0) {
         setError('سعر الشراء لا يمكن أن يكون سالباً');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
 
@@ -129,6 +130,7 @@ const AdminProducts = () => {
       setError('');
     } catch (err) {
       setError(err.message || 'حدث خطأ عند حفظ المنتج');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -163,6 +165,7 @@ const AdminProducts = () => {
     try {
       if (!newProduct.name || !newProduct.nameAr || !newProduct.price || !newProduct.category) {
         setError('يرجى ملء جميع الحقول المطلوبة');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
 
@@ -201,6 +204,7 @@ const AdminProducts = () => {
       setError('');
     } catch (err) {
       setError(err.message || 'حدث خطأ عند إضافة المنتج');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -291,7 +295,7 @@ const AdminProducts = () => {
                 placeholder="الاسم بالإنجليزية"
                 value={newProduct.name}
                 onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                required
+
                 className="bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-3 text-brand-cream placeholder-gray-600 focus:border-brand-gold outline-none"
               />
               <input
@@ -299,7 +303,7 @@ const AdminProducts = () => {
                 placeholder="الاسم بالعربية"
                 value={newProduct.nameAr}
                 onChange={(e) => setNewProduct({ ...newProduct, nameAr: e.target.value })}
-                required
+
                 className="bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-3 text-brand-cream placeholder-gray-600 focus:border-brand-gold outline-none"
               />
               <input
@@ -307,7 +311,7 @@ const AdminProducts = () => {
                 placeholder="سعر البيع (د.ج)"
                 value={newProduct.price}
                 onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
-                required
+
                 step="0.01"
                 className="bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-3 text-brand-cream placeholder-gray-600 focus:border-brand-gold outline-none"
               />
@@ -322,7 +326,7 @@ const AdminProducts = () => {
               <select
                 value={newProduct.category}
                 onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
-                required
+
                 className="bg-[#0f0a08] border border-brand-gold/30 rounded-lg p-3 text-brand-cream focus:border-brand-gold outline-none"
               >
                 <option value="">اختر الفئة</option>
