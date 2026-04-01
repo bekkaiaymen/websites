@@ -353,6 +353,18 @@ app.put('/api/products/:id', authenticateToken, async (req, res) => {
 });
 
 // DELETE /api/products/:id - Delete a product
+app.post('/api/products/bulk-delete', authenticateToken, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !ids.length) return res.status(400).json({ error: 'No ids provided' });
+    await Product.deleteMany({ _id: { $in: ids } });
+    res.json({ message: 'Products deleted' });
+  } catch (err) {
+    console.error('Bulk delete error:', err);
+    res.status(500).json({ error: 'Failed to delete products' });
+  }
+});
+
 app.delete('/api/products/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;

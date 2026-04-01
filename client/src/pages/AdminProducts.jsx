@@ -5,6 +5,10 @@ import AdminNavbar from '../components/AdminNavbar';
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [bulkAction, setBulkAction] = useState('');
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -150,6 +154,54 @@ const AdminProducts = () => {
     setEditData({});
   };
 
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds(products.map(p => p._id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelect = (id) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedIds.length) return;
+    if (!window.confirm('هل أنت متأكد من حذف المنتجات المحددة؟')) return;
+    try {
+      setIsBulkDeleting(true);
+      const token = localStorage.getItem('adminToken');
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+      const response = await fetch(`${API_URL}/api/products/bulk-delete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({ ids: selectedIds })
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        window.location.href = '/admin/login';
+        return;
+      }
+      if (!response.ok) throw new Error('فشل حذف المنتجات');
+
+      setSelectedIds([]);
+      fetchProducts();
+    } catch (err) {
+      setError(err.message || 'حدث خطأ عند الحذف');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   const handleDelete = async (id) => {
     if (!window.confirm('هل تريد حذف هذا المنتج؟')) return;
     try {
@@ -255,6 +307,19 @@ const AdminProducts = () => {
             <p className="text-gray-400">
               عدد المنتجات: {products.length}
             </p>
+            {selectedIds.length > 0 && (
+              <div className="mt-4 flex items-center gap-4 bg-brand-gold/10 p-3 rounded-lg border border-brand-gold/30">
+                <span className="text-brand-cream text-sm">تم تحديد {selectedIds.length}</span>
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={isBulkDeleting}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-red-900/50 text-red-500 rounded hover:bg-red-900 transition-colors text-sm"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {isBulkDeleting ? 'جاري الحذف...' : 'حذف المحدد'}
+                </button>
+              </div>
+            )}
           </div>
           <button
             onClick={() => setShowAddForm(!showAddForm)}
@@ -409,6 +474,14 @@ const AdminProducts = () => {
             <table className="w-full">
               <thead className="bg-brand-gold/10 border-b border-brand-gold/30">
                 <tr>
+                  <th className="px-6 py-4 text-right">
+                    <input 
+                      type="checkbox" 
+                      onChange={handleSelectAll} 
+                      checked={products.length > 0 && selectedIds.length === products.length}
+                      className="w-4 h-4 rounded border-brand-gold/30 bg-[#0f0a08] accent-brand-gold focus:ring-brand-gold focus:ring-offset-[#1a120f]"
+                    />
+                  </th>
                   <th className="px-6 py-4 text-right text-sm font-semibold text-brand-cream">الصورة</th>
                   <th className="px-6 py-4 text-right text-sm font-semibold text-brand-cream">الاسم بالعربية</th>
                   <th className="px-6 py-4 text-right text-sm font-semibold text-brand-cream">الاسم</th>
@@ -427,6 +500,14 @@ const AdminProducts = () => {
 
                   return (
                     <tr key={product._id} className="hover:bg-brand-gold/5 transition-colors">
+                      <td className="px-6 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(product._id)}
+                          onChange={() => handleSelect(product._id)}
+                          className="w-4 h-4 rounded border-brand-gold/30 bg-[#0f0a08] accent-brand-gold focus:ring-brand-gold focus:ring-offset-[#1a120f]"
+                        />
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {isEditing ? (
                           <div className="flex flex-col gap-2 relative">
