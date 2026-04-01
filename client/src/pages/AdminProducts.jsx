@@ -124,6 +124,12 @@ const AdminProducts = () => {
         body: JSON.stringify(editData)
       });
 
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        window.location.href = '/admin/login';
+        return;
+      }
       if (!response.ok) throw new Error('فشل حفظ المنتج');
 
       await response.json();
@@ -157,6 +163,12 @@ const AdminProducts = () => {
         }
       });
 
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        window.location.href = '/admin/login';
+        return;
+      }
       if (!response.ok) throw new Error('فشل حذف المنتج');
 
       fetchProducts();
@@ -194,6 +206,12 @@ const AdminProducts = () => {
         })
       });
 
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        window.location.href = '/admin/login';
+        return;
+      }
       if (!response.ok) throw new Error('فشل إضافة المنتج');
 
       setNewProduct({
