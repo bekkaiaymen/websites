@@ -96,6 +96,18 @@ const AdminNavbar = ({ onLogout }) => {
               </Link>
 
               <Link
+                to="/admin/shopify-orders"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  isActive('/admin/shopify-orders')
+                    ? 'bg-orange-600 text-white'
+                    : 'text-gray-400 hover:text-brand-cream bg-orange-600/10 hover:bg-orange-600/20'
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                <span className="text-sm">طلبيات Shopify</span>
+              </Link>
+
+              <Link
                 to="/admin/ecotrack"
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
                   isActive('/admin/ecotrack')

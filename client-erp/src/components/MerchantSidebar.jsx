@@ -48,6 +48,12 @@ const MerchantSidebar = ({ isOpen, activeTab, onTabChange }) => {
       label: 'الإعدادات',
       icon: <Settings className="w-5 h-5" />,
       description: 'إعدادات الحساب'
+    },
+    {
+      id: 'shopify-link',
+      label: 'طلبات Shopify 📦',
+      icon: <FileText className="w-5 h-5 text-orange-500" />,
+      description: 'تأكيد وتصدير لشركة التوصيل'
     }
   ];
 

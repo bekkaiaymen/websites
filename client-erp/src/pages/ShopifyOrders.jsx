@@ -6,13 +6,14 @@ import {
   Phone,
   MapPin,
   DollarSign,
-  Calendar,
   Loader2,
-  RefreshCw,
   Filter,
-  Search
+  Search,
+  ArrowRight
 } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import AdminNavbar from '../components/AdminNavbar';
+import MerchantNavbar from '../components/MerchantNavbar';
 import { buildApiUrl } from '../api';
 
 /**
@@ -25,6 +26,12 @@ import { buildApiUrl } from '../api';
  * 4. Status tracking
  */
 const ShopifyOrders = () => {
+  // ========================================================================
+  // Default and Navigation State
+  // ========================================================================
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isMerchantUI = location.pathname.includes('/merchant/');
   // ========================================================================
   // State Management
   // ========================================================================
@@ -278,7 +285,11 @@ const ShopifyOrders = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-brand-dark">
-        <AdminNavbar />
+        {isMerchantUI ? (
+          <MerchantNavbar merchantName={currentMerchant?.name} />
+        ) : (
+          <AdminNavbar />
+        )}
         <div className="flex items-center justify-center h-96">
           <Loader2 className="w-8 h-8 text-brand-gold animate-spin" />
         </div>
@@ -291,8 +302,33 @@ const ShopifyOrders = () => {
   // ========================================================================
   return (
     <div className="min-h-screen bg-brand-dark">
-      <AdminNavbar />
+      {isMerchantUI ? (
+        <MerchantNavbar
+          merchantName={currentMerchant?.name}
+          onLogout={() => {
+            localStorage.removeItem('merchantToken');
+            localStorage.removeItem('merchantUser');
+            navigate('/merchant/login');
+          }}
+          sidebarOpen={false}
+          onToggleSidebar={() => {}}
+        />
+      ) : (
+        <AdminNavbar />
+      )}
+      
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Navigation Return */}
+        <div className="mb-4">
+          <button
+            onClick={() => navigate(isMerchantUI ? '/merchant/dashboard' : '/admin/dashboard')}
+            className="flex items-center gap-2 text-brand-gold hover:text-yellow-400 transition-colors"
+          >
+            <ArrowRight className="w-4 h-4" />
+            <span className="text-sm font-semibold">العودة إلى لوحة التحكم</span>
+          </button>
+        </div>
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">📦 طلبيات Shopify</h1>

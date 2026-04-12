@@ -90,7 +90,13 @@ const MerchantDashboard = () => {
         <MerchantSidebar
           isOpen={sidebarOpen}
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={(tab) => {
+            if (tab === 'shopify-link') {
+              window.location.href = '/merchant/shopify-orders';
+              return;
+            }
+            setActiveTab(tab);
+          }}
         />
 
         {/* Main Content */}

@@ -165,22 +165,20 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
     // Set up headers based on Ecotrack import format
     // ========================================================================
     const headers = [
-      'الرقم *',
+      'المرجع/Tracking',
       'اسم المستقبل *',
       'رقم هاتف المستقبل *',
       'الهاتف 2',
       'البلدية *',
       'الولاية *',
-      'العنوان ',
+      'العنوان',
       'اسم المنتج',
-      'الوصف',
-      'الوزن',
       'القيمة المجموع *',
       'ملاحظات'
     ];
 
     worksheet.columns = [
-      { header: headers[0], key: 'number', width: 10 },
+      { header: headers[0], key: 'trackingId', width: 20 },
       { header: headers[1], key: 'customerName', width: 20 },
       { header: headers[2], key: 'phone1', width: 15 },
       { header: headers[3], key: 'phone2', width: 15 },
@@ -188,10 +186,8 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
       { header: headers[5], key: 'wilaya', width: 15 },
       { header: headers[6], key: 'address', width: 30 },
       { header: headers[7], key: 'productName', width: 20 },
-      { header: headers[8], key: 'description', width: 20 },
-      { header: headers[9], key: 'weight', width: 10 },
-      { header: headers[10], key: 'totalAmount', width: 15 },
-      { header: headers[11], key: 'notes', width: 20 }
+      { header: headers[8], key: 'totalAmount', width: 15 },
+      { header: headers[9], key: 'notes', width: 20 }
     ];
 
     // Style header row
@@ -205,7 +201,7 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
     // ========================================================================
     // Add order data rows
     // ========================================================================
-    confirmedOrders.forEach((order, index) => {
+    confirmedOrders.forEach((order) => {
       const phone = order.customerData.phone || '';
       // Support multiple phone formats
       const isValidPhone = phone.match(
@@ -216,7 +212,7 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
       const productName = order.products?.[0]?.name || 'شوكولاتة';
 
       worksheet.addRow({
-        number: index + 1,
+        trackingId: order.trackingId,
         customerName: order.customerData.name,
         phone1: isValidPhone ? phone : '', // Leave empty if invalid
         phone2: '',
@@ -224,8 +220,6 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
         wilaya: order.customerData.wilaya?.split(' ')?.[0] || order.customerData.wilaya || '',
         address: order.customerData.address,
         productName: productName,
-        description: `Tracking: ${order.trackingId}`,
-        weight: '',
         totalAmount: order.totalAmountDzd,
         notes: `Order: ${order.trackingId}`
       });
