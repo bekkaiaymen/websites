@@ -2,6 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, AlertCircle } from 'lucide-react';
 
+/**
+ * AdminLogin - صفحة تسجيل دخول الإدمن
+ * بيانات الدخول:
+ * - اسم المستخدم: aymen
+ * - كلمة المرور: aymenbekkai17@
+ */
 const AdminLogin = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
