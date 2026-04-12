@@ -10,6 +10,7 @@ const Admin = require('./models/Admin');
 const Expense = require('./models/Expense');
 const Hint = require('./models/Hint');
 const shopifyWebhooksRouter = require('./routes/shopifyWebhooks');
+const manualOrdersRouter = require('./routes/manualOrders');
 
 require('dotenv').config();
 
@@ -407,6 +408,9 @@ app.use('/api/erp/ecotrack', authenticateToken, require('./routes/ecotrackIntegr
 
 // ============ SHOPIFY WEBHOOK ROUTES ============
 app.use('/api/erp/webhooks/shopify', shopifyWebhooksRouter);
+
+// ============ MANUAL ORDER ROUTES (Facebook, manual entry) ============
+app.use('/api/erp/orders/manual', manualOrdersRouter);
 
 // ============ MERCHANT PORTAL ROUTES ============
 app.use('/api/merchant/auth', require('./routes/merchantAuth'));

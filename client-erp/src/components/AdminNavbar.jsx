@@ -1,6 +1,6 @@
 ﻿import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LogOut, BarChart3, Box, Grid3x3, Settings, Truck, Wallet, Users, FileText, RefreshCw } from 'lucide-react';
+import { LogOut, BarChart3, Box, Grid3x3, Settings, Truck, Wallet, Users, FileText, RefreshCw, Plus } from 'lucide-react';
 
 const AdminNavbar = ({ onLogout }) => {
   const location = useLocation();
@@ -107,6 +107,18 @@ const AdminNavbar = ({ onLogout }) => {
           >
             <Truck className="w-4 h-4" />
             <span className="text-sm">الطلبيات</span>
+          </Link>
+
+          <Link
+            to="/new-order"
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              isActive('/new-order')
+                ? 'bg-emerald-600 text-white'
+                : 'text-gray-400 hover:text-brand-cream bg-emerald-600/10 hover:bg-emerald-600/20'
+            }`}
+          >
+            <Plus className="w-4 h-4" />
+            <span className="text-sm">إضافة طلبية يدوية</span>
           </Link>
 
           {!isDelivery && (

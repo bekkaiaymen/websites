@@ -15,6 +15,7 @@ import {
 import merchantAPI from '../api/merchantAPI';
 import MerchantNavbar from '../components/MerchantNavbar';
 import MerchantSidebar from '../components/MerchantSidebar';
+import ManualOrderForm from '../components/ManualOrderForm';
 
 /**
  * MerchantDashboard - Main merchant portal dashboard
@@ -111,6 +112,13 @@ const MerchantDashboard = () => {
 
             {dashboardData && activeTab === 'overview' && (
               <DashboardOverview data={dashboardData} />
+            )}
+
+            {activeTab === 'new-order' && (
+              <ManualOrderForm 
+                userRole="merchant" 
+                userMerchantId={merchantUser.id}
+              />
             )}
 
             {activeTab === 'orders' && <OrdersTab merchantId={merchantUser.id} />}

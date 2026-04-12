@@ -4,7 +4,8 @@ import {
   Package,
   Wallet,
   FileText,
-  Settings
+  Settings,
+  Plus
 } from 'lucide-react';
 
 /**
@@ -23,6 +24,12 @@ const MerchantSidebar = ({ isOpen, activeTab, onTabChange }) => {
       label: 'الطلبات',
       icon: <Package className="w-5 h-5" />,
       description: 'جميع طلباتك'
+    },
+    {
+      id: 'new-order',
+      label: 'إضافة طلبية جديدة',
+      icon: <Plus className="w-5 h-5" />,
+      description: 'أضف طلبية من فيسبوك'
     },
     {
       id: 'wallet',
