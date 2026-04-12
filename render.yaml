@@ -10,3 +10,35 @@ services:
       - fromGroup: ali-baba-secrets
       - key: PORT
         value: 5000
+    autoDeploy: true
+    headers:
+      - path: /api/*
+        headers:
+          - key: Access-Control-Allow-Origin
+            value: '*'
+          - key: Access-Control-Allow-Methods
+            value: GET,POST,PUT,DELETE,OPTIONS
+          - key: Access-Control-Allow-Headers
+            value: Content-Type,Authorization
+    
+    # Health check endpoint
+    healthCheckPath: /
+    
+    # Deployment notifications
+    notifyOnFail: true
+    autoDeploy: true
+    headers:
+      - path: /api/*
+        headers:
+          - key: Access-Control-Allow-Origin
+            value: '*'
+          - key: Access-Control-Allow-Methods
+            value: GET,POST,PUT,DELETE,OPTIONS
+          - key: Access-Control-Allow-Headers
+            value: Content-Type,Authorization
+    
+    # Health check endpoint
+    healthCheckPath: /
+    
+    # Deployment notifications
+    notifyOnFail: true
