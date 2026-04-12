@@ -18,7 +18,7 @@ const {
   formatPhoneNumber,
   validateMandatoryFields,
   ecotrackHeaders
-} = require('../lib/wilayasMapping');
+} = require('../../lib/wilayasMapping');
 
 // Middleware: Authenticate merge both JWT checks
 const authenticateToken = (req, res, next) => {
