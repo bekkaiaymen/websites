@@ -28,7 +28,7 @@ class MerchantAPI {
       
       // Store token and user data
       localStorage.setItem('merchantToken', data.token);
-      localStorage.setItem('merchantUser', JSON.stringify(data.user));
+      localStorage.setItem('merchantUser', JSON.stringify(data.merchant));
       
       return data;
     } catch (error) {
