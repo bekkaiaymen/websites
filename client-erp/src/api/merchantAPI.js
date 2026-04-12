@@ -12,6 +12,12 @@ class MerchantAPI {
   static async login(email, password) {
     try {
       const url = buildApiUrl('/api/merchant/login');
+      
+      console.log(`\n🔐 MERCHANT LOGIN (Frontend):`);
+      console.log(`   URL: ${url}`);
+      console.log(`   Email: ${email}`);
+      console.log(`   Password length: ${password.length}`);
+      
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -20,11 +26,16 @@ class MerchantAPI {
         body: JSON.stringify({ email, password })
       });
 
+      console.log(`   Response Status: ${response.status}`);
+
       if (!response.ok) {
+        const errorData = await response.json();
+        console.log(`   Error: ${errorData.error}`);
         throw new Error(`Login failed: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log(`   ✅ Login successful - token received`);
       
       // Store token and user data
       localStorage.setItem('merchantToken', data.token);

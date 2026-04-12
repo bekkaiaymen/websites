@@ -10,8 +10,14 @@ const router = express.Router();
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    
+    console.log(`\n🔍 MERCHANT LOGIN ATTEMPT:`);
+    console.log(`   Email received: ${email}`);
+    console.log(`   Password length: ${password?.length || 0}`);
+    console.log(`   Timestamp: ${new Date().toISOString()}`);
 
     if (!email || !password) {
+      console.log(`   ❌ Missing email or password`);
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
@@ -21,7 +27,15 @@ router.post('/login', async (req, res) => {
       status: 'active'
     });
 
-    if (!merchant || !merchant.password) {
+    if (!merchant) {
+      console.log(`   ❌ Merchant not found in database`);
+      return res.status(401).json({ 
+        error: 'Invalid credentials or merchant account not activated' 
+      });
+    }
+
+    if (!merchant.password) {
+      console.log(`   ❌ Merchant found but has no password`);
       return res.status(401).json({ 
         error: 'Invalid credentials or merchant account not activated' 
       });
@@ -29,7 +43,10 @@ router.post('/login', async (req, res) => {
 
     // Compare password with bcrypt
     const passwordMatch = await bcryptjs.compare(password, merchant.password);
+    console.log(`   Password comparison result: ${passwordMatch ? '✅ MATCH' : '❌ NO MATCH'}`);
+    
     if (!passwordMatch) {
+      console.log(`   ❌ Password incorrect`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -45,6 +62,8 @@ router.post('/login', async (req, res) => {
       { expiresIn: '30d' }
     );
 
+    console.log(`   ✅ Login successful - token generated`);
+    
     res.json({
       token,
       merchant: {
@@ -55,7 +74,7 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Merchant login error:', error);
+    console.error(`   ❌ Server error: ${error.message}`);
     res.status(500).json({ error: 'Server error during login' });
   }
 });
