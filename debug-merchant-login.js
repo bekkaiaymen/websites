@@ -4,8 +4,8 @@ const testMerchantLogin = async () => {
     console.log('🔍 Testing merchant login...\n');
     
     const payload = {
-      email: 'merchant@test.com',
-      password: 'merchant123'
+      email: 'aymenbekkai17@gmail.com',
+      password: 'aymenbekkai17@'
     };
     
     console.log('📤 Sending request:');
