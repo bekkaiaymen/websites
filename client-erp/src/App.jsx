@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import ProtectedRoute from './components/ProtectedRoute';
 import MerchantProtectedRoute from './components/MerchantProtectedRoute';
 import AdminLogin from './pages/AdminLogin';
+import AdminLoginV2 from './pages/AdminLoginV2';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminProducts from './pages/AdminProducts';
 import AdminCategories from './pages/AdminCategories';
@@ -26,6 +27,7 @@ const App = () => {
         {/* Admin Portal Routes */}
         <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/login-v2" element={<AdminLoginV2 />} />
         <Route path="/admin/dashboard" element={<ProtectedRoute element={<AdminDashboard />} allowedRoles={['admin', 'superadmin']} />} />
         <Route path="/admin/orders" element={<ProtectedRoute element={<AdminOrders />} />} />
         <Route path="/admin/products" element={<ProtectedRoute element={<AdminProducts />} allowedRoles={['admin', 'superadmin']} />} />
