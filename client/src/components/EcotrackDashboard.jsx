@@ -247,7 +247,7 @@ const EcotrackDashboard = ({ adminToken }) => {
 
       {/* Footer Info */}
       <div className="mt-12 p-6 bg-brand-gold/5 border border-brand-gold/10 rounded-lg text-center text-gray-400">
-        <p className="text-sm"
+        <p className="text-sm">
           Ecotrack Integration • Need help? Contact support@example.com
         </p>
       </div>
