@@ -1,5 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const bcryptjs = require('bcryptjs');
 const Merchant = require('../models/Merchant');
 
 const router = express.Router();
@@ -26,8 +27,9 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Simple password comparison (in production, use bcrypt)
-    if (merchant.password !== password) {
+    // Compare password with bcrypt
+    const passwordMatch = await bcryptjs.compare(password, merchant.password);
+    if (!passwordMatch) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 

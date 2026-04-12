@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const bcryptjs = require('bcryptjs');
 const fileUpload = require('express-fileupload');
 const Order = require('./models/Order');
 const Category = require('./models/Category');
@@ -424,7 +425,7 @@ app.use('/api/erp/orders/manual', manualOrdersRouter);
 app.use('/api/erp/expenses', authenticateToken, expenseRouter);
 
 // ============ MERCHANT PORTAL ROUTES ============
-app.use('/api/merchant/auth', require('./routes/merchantAuth'));
+app.use('/api/merchant', require('./routes/merchantAuth'));
 app.use('/api/merchant', require('./routes/merchantDashboard'));
 
 // ============ ADMIN AUTHENTICATION ENDPOINTS ============
@@ -440,7 +441,13 @@ app.post('/api/admin/login', async (req, res) => {
 
     const admin = await Admin.findOne({ username, active: true });
     
-    if (!admin || admin.password !== password) {
+    if (!admin) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Compare password with bcrypt
+    const passwordMatch = await bcryptjs.compare(password, admin.password);
+    if (!passwordMatch) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
