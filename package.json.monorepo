@@ -1,0 +1,24 @@
+{
+  "name": "delivery-monorepo",
+  "version": "1.0.0",
+  "description": "Monorepo: B2C Storefront + B2B ERP Platform + Headless API",
+  "private": true,
+  "workspaces": [
+    "server",
+    "client-storefront",
+    "client-erp"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client-storefront\" \"npm run dev -w client-erp\"",
+    "build": "npm run build -w server && npm run build -w client-storefront && npm run build -w client-erp",
+    "build:storefront": "npm run build -w client-storefront",
+    "build:erp": "npm run build -w client-erp",
+    "build:server": "npm run build -w server",
+    "start": "npm start -w server",
+    "start:storefront": "npm run dev -w client-storefront",
+    "start:erp": "npm run dev -w client-erp"
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.0"
+  }
+}

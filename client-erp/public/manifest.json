@@ -1,0 +1,36 @@
+{
+  "name": "توصيل غرداية - خدمة سريعة وموثوقة",
+  "short_name": "توصيل غرداية",
+  "description": "تطبيق توصيل احترافي في مدينة غرداية",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#d35400",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23d35400' width='192' height='192'/><text x='96' y='120' font-size='80' fill='white' text-anchor='middle' font-family='Arial'>📦</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect fill='%23d35400' width='512' height='512'/><text x='256' y='350' font-size='300' fill='white' text-anchor='middle' font-family='Arial'>📦</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%23fcf8f3' width='540' height='720'/><text x='270' y='100' font-size='40' fill='%23d35400' text-anchor='middle' font-family='Arial'>توصيل غرداية</text></svg>",
+      "sizes": "540x720",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ],
+  "categories": ["logistics", "utilities"],
+  "screenshots": [],
+  "prefer_related_applications": false
+}

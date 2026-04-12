@@ -2,12 +2,14 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const fileUpload = require('express-fileupload');
 const Order = require('./models/Order');
 const Category = require('./models/Category');
 const Product = require('./models/Product');
 const Admin = require('./models/Admin');
 const Expense = require('./models/Expense');
 const Hint = require('./models/Hint');
+const shopifyWebhooksRouter = require('./routes/shopifyWebhooks');
 
 require('dotenv').config();
 
@@ -15,8 +17,23 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
+
+// ⚠️ CRITICAL: Raw body middleware for Shopify HMAC validation
+// MUST come BEFORE express.json() to preserve raw body for signature verification
+app.use('/api/erp/webhooks/shopify', express.raw({ type: 'application/json' }));
+app.use('/api/erp/webhooks/shopify', (req, res, next) => {
+  req.rawBody = req.body;
+  next();
+});
+
+// Normal JSON parser for all other routes
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(fileUpload({
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  useTempFiles: true,
+  tempFileDir: '/tmp/'
+}));
 
 // Authentication Middleware
 const authenticateToken = (req, res, next) => {
@@ -382,6 +399,19 @@ app.delete('/api/products/:id', authenticateToken, async (req, res) => {
   }
 });
 
+app.use('/api/erp', authenticateToken, require('./routes/erpFinance'));
+app.use('/api/erp/reconciliation', authenticateToken, require('./routes/erpReconciliation'));
+app.use('/api/erp/invoices', authenticateToken, require('./routes/erpInvoices'));
+app.use('/api/erp/merchants', authenticateToken, require('./routes/erpMerchants'));
+app.use('/api/erp/ecotrack', authenticateToken, require('./routes/ecotrackIntegration'));
+
+// ============ SHOPIFY WEBHOOK ROUTES ============
+app.use('/api/erp/webhooks/shopify', shopifyWebhooksRouter);
+
+// ============ MERCHANT PORTAL ROUTES ============
+app.use('/api/merchant/auth', require('./routes/merchantAuth'));
+app.use('/api/merchant', require('./routes/merchantDashboard'));
+
 // ============ ADMIN AUTHENTICATION ENDPOINTS ============
 
 // POST /api/admin/login - Admin login
@@ -415,6 +445,57 @@ app.post('/api/admin/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Error logging in:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/admin/setup - Create default admin if none exists
+app.post('/api/admin/setup', async (req, res) => {
+  try {
+    // حذف جميع المديرين القدماء
+    await Admin.deleteMany({});
+    
+    const admin = new Admin({
+      username: 'admin',
+      password: 'admin123',
+      email: 'admin@alibaba.com',
+      role: 'superadmin',
+      active: true
+    });
+
+    await admin.save();
+    res.status(201).json({ 
+      message: 'Admin created successfully',
+      admin: {
+        username: admin.username,
+        role: admin.role
+      }
+    });
+  } catch (error) {
+    console.error('Error setting up admin:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET /api/admin/debug/list - List all admins (debug only)
+app.get('/api/admin/debug/list', async (req, res) => {
+  try {
+    const admins = await Admin.find({});
+    const safe = admins.map(a => ({ username: a.username, email: a.email, role: a.role, active: a.active }));
+    res.json(safe);
+  } catch (error) {
+    console.error('Error listing admins:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// DELETE /api/admin/debug/clear - Clear all admins (debug only)
+app.delete('/api/admin/debug/clear', async (req, res) => {
+  try {
+    const result = await Admin.deleteMany({});
+    res.json({ message: 'All admins deleted', count: result.deletedCount });
+  } catch (error) {
+    console.error('Error clearing admins:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

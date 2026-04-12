@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Home from './pages/Home';
-// Admin component is deprecated in favor of individual pages
+import ProtectedRoute from './components/ProtectedRoute';
+import MerchantProtectedRoute from './components/MerchantProtectedRoute';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminProducts from './pages/AdminProducts';
@@ -12,24 +12,13 @@ import AdminWallet from './pages/AdminWallet';
 import AdminMerchants from './pages/AdminMerchants';
 import AdminInvoices from './pages/AdminInvoices';
 import AdminEcotrack from './pages/AdminEcotrack';
-import CampaignLanding from './pages/CampaignLanding';
-import HintCampaign from './pages/HintCampaign';
-import HusbandCheckout from './pages/HusbandCheckout';
-import ProtectedRoute from './components/ProtectedRoute';
-// Merchant Portal
 import MerchantLogin from './pages/MerchantLogin';
 import MerchantDashboard from './pages/MerchantDashboard';
-import MerchantProtectedRoute from './components/MerchantProtectedRoute';
 
 const App = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/offer" element={<CampaignLanding />} />
-        <Route path="/hint" element={<HintCampaign />} />
-        <Route path="/surprise" element={<HusbandCheckout />} />
-        
         {/* Admin Portal Routes */}
         <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="/admin/login" element={<AdminLogin />} />
@@ -40,13 +29,16 @@ const App = () => {
         <Route path="/admin/hint-settings" element={<ProtectedRoute element={<AdminHintSettings />} allowedRoles={['admin', 'superadmin']} />} />
         <Route path="/admin/wallet" element={<ProtectedRoute element={<AdminWallet />} allowedRoles={['admin', 'superadmin']} />} />
         <Route path="/admin/merchants" element={<ProtectedRoute element={<AdminMerchants />} allowedRoles={['admin', 'superadmin']} />} />
-        <Route path="/admin/invoices" element={<ProtectedRoute element={<AdminInvoices />} allowedRoles={['admin', 'superadmin']} />} />
+        <Route path="/admin/invoices" element={<ProtectedRoute element={<AdminInvoices />} allowedRoles={['admin', 'superadmin']} />} /> 
         <Route path="/admin/ecotrack" element={<ProtectedRoute element={<AdminEcotrack />} allowedRoles={['admin', 'superadmin']} />} />
         
         {/* Merchant Portal Routes */}
         <Route path="/merchant" element={<Navigate to="/merchant/dashboard" replace />} />
         <Route path="/merchant/login" element={<MerchantLogin />} />
         <Route path="/merchant/dashboard" element={<MerchantProtectedRoute element={<MerchantDashboard />} />} />
+        
+        {/* Catch all - redirect to merchant login */}
+        <Route path="*" element={<Navigate to="/merchant/login" replace />} />
       </Routes>
     </Router>
   );
