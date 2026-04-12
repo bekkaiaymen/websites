@@ -141,13 +141,42 @@ function extractAddressComponents(shippingAddress) {
 }
 
 /**
+ * GET /api/erp/webhooks/shopify/health
+ * Health check and webhook configuration guide
+ * Returns helpful information about how to configure Shopify webhooks
+ */
+function healthCheck(req, res) {
+  return res.status(200).json({
+    success: true,
+    message: '✅ Shopify webhook endpoint is operational',
+    status: 'OK',
+    hmacValidation: 'Enabled - verifying all incoming requests',
+    configuration: {
+      endpoint: '/api/erp/webhooks/shopify/order-create',
+      requiredQueryParam: 'merchantId (valid MongoDB ObjectId)',
+      expectedHeaders: [
+        'X-Shopify-Hmac-SHA256',
+        'X-Shopify-Topic',
+        'X-Shopify-Shop-Api-Version',
+        'X-Shopify-Shop-Id'
+      ]
+    },
+    instructions: {
+      step1: 'On Shopify Admin, go to Settings → Apps and integrations → Webhooks',
+      step2: 'Add a new webhook webhook URL',
+      step3: 'Use URL format: https://prince-delivery.onrender.com/api/erp/webhooks/shopify/order-create?merchantId=<MERCHANT_OBJECT_ID>',
+      step4: 'Replace <MERCHANT_OBJECT_ID> with actual MongoDB ObjectId of your merchant',
+      step5: 'Select topic: orders/create',
+      step6: 'API version: Use latest stable version',
+      note: 'merchantId must be 24 hexadecimal characters (MongoDB ObjectId format)'
+    },
+    exampleUrl: 'https://prince-delivery.onrender.com/api/erp/webhooks/shopify/order-create?merchantId=69db8a4a293ad65cbe667ad4'
+  });
+}
+
+/**
  * POST /api/erp/webhooks/shopify/order-create
- * Main webhook handler
- * 
- * Query Parameters:
- * - merchantId: MongoDB ObjectId of the Merchant (required)
- * 
- * Body: Shopify order JSON payload
+ * Main webhook handler for Shopify order creation events
  */
 async function handleShopifyOrderCreate(req, res) {
   try {
@@ -182,6 +211,16 @@ async function handleShopifyOrderCreate(req, res) {
         success: false,
         error: 'Missing merchantId',
         message: 'merchantId query parameter is required (e.g., ?merchantId=12345)'
+      });
+    }
+
+    // Validate merchantId format (must be valid MongoDB ObjectId)
+    if (!merchantId || !merchantId.match(/^[0-9a-fA-F]{24}$/)) {
+      console.error(`❌ Shopify webhook: Invalid merchantId format: ${merchantId}`);
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid merchantId format',
+        message: `merchantId must be a valid MongoDB ObjectId (24 hex characters), got: ${merchantId}`
       });
     }
 
