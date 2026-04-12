@@ -57,6 +57,10 @@ const authenticateToken = (req, res, next) => {
   }
 };
 
+// ============ SHOPIFY WEBHOOK ROUTES (MUST be BEFORE auth middleware) ============
+// Webhooks use HMAC signatures, NOT JWT tokens
+app.use('/api/erp/webhooks/shopify', shopifyWebhooksRouter);
+
 // MongoDB Connection
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/alibaba_chocolate';
 
@@ -414,9 +418,6 @@ app.use('/api/erp/ecotrack', authenticateToken, require('./routes/ecotrackIntegr
 // ============ SETTINGS & FULFILLMENT ROUTES (NEW) ============
 app.use('/api/erp', settingsRouter);
 app.use('/api/erp', authenticateToken, fulfillmentRouter);
-
-// ============ SHOPIFY WEBHOOK ROUTES ============
-app.use('/api/erp/webhooks/shopify', shopifyWebhooksRouter);
 
 // ============ MANUAL ORDER ROUTES (Facebook, manual entry) ============
 app.use('/api/erp/orders/manual', manualOrdersRouter);
