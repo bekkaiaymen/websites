@@ -11,6 +11,7 @@ const Expense = require('./models/Expense');
 const Hint = require('./models/Hint');
 const shopifyWebhooksRouter = require('./routes/shopifyWebhooks');
 const manualOrdersRouter = require('./routes/manualOrders');
+const expenseRouter = require('./routes/expense');
 
 require('dotenv').config();
 
@@ -411,6 +412,9 @@ app.use('/api/erp/webhooks/shopify', shopifyWebhooksRouter);
 
 // ============ MANUAL ORDER ROUTES (Facebook, manual entry) ============
 app.use('/api/erp/orders/manual', manualOrdersRouter);
+
+// ============ SHARED EXPENSES & BILLING ROUTES ============
+app.use('/api/erp/expenses', authenticateToken, expenseRouter);
 
 // ============ MERCHANT PORTAL ROUTES ============
 app.use('/api/merchant/auth', require('./routes/merchantAuth'));

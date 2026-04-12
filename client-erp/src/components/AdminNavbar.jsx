@@ -1,6 +1,6 @@
 ﻿import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LogOut, BarChart3, Box, Grid3x3, Settings, Truck, Wallet, Users, FileText, RefreshCw, Plus } from 'lucide-react';
+import { LogOut, BarChart3, Box, Grid3x3, Settings, Truck, Wallet, Users, FileText, RefreshCw, Plus, DollarSign } from 'lucide-react';
 
 const AdminNavbar = ({ onLogout }) => {
   const location = useLocation();
@@ -57,6 +57,18 @@ const AdminNavbar = ({ onLogout }) => {
               >
                 <Wallet className="w-4 h-4" />
                 <span className="text-sm">المحفظة الذكية</span>
+              </Link>
+
+              <Link
+                to="/admin/expenses"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  isActive('/admin/expenses')
+                    ? 'bg-yellow-600 text-white'
+                    : 'text-gray-400 hover:text-brand-cream bg-yellow-600/10 hover:bg-yellow-600/20'
+                }`}
+              >
+                <DollarSign className="w-4 h-4" />
+                <span className="text-sm">المصاريف المشتركة</span>
               </Link>
 
               <Link
