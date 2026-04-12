@@ -21,6 +21,7 @@ import ManualOrderForm from '../components/ManualOrderForm';
  * MerchantDashboard - Main merchant portal dashboard
  * Shows merchant-specific data with costs properly masked
  * 
+ * VERSION: 2.0.1 - Enhanced authentication & logging
  * SECURITY FEATURES:
  * - Only shows data for logged-in merchant
  * - USD buy rates hidden (merchant never sees 251 DZD)
