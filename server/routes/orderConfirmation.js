@@ -12,6 +12,13 @@ const ErpOrder = require('../models/ErpOrder');
 const Merchant = require('../models/Merchant');
 const ExcelJS = require('exceljs');
 const mongoose = require('mongoose');
+const {
+  getWilayaCode,
+  getWilayaName,
+  formatPhoneNumber,
+  validateMandatoryFields,
+  ecotrackHeaders
+} = require('../lib/wilayasMapping');
 
 // Middleware: Authenticate merge both JWT checks
 const authenticateToken = (req, res, next) => {
@@ -154,7 +161,10 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
     const confirmedOrders = await ErpOrder.find(query).sort({ confirmedAt: -1 });
 
     if (confirmedOrders.length === 0) {
-      return res.status(400).json({ error: 'No confirmed orders to export' });
+      return res.status(400).json({ 
+        error: 'No confirmed orders to export',
+        message: 'لا توجد طلبات مؤكدة لتصديرها. يرجى تأكيد الطلبات أولاً.'
+      });
     }
 
     // Create workbook
@@ -164,46 +174,25 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
     // ========================================================================
     // Set up headers based on Ecotrack import format (upload_ecotrack_v31.xlsx)
     // ========================================================================
-    const headers = [
-      'reference commande',
-      'nom et prenom du destinataire*',
-      'telephone*',
-      'telephone 2',
-      'code wilaya*',
-      'wilaya de livraison',
-      'commune de livraison*',
-      'adresse de livraison*',
-      'produit*',
-      'poids (kg)',
-      'montant du colis*',
-      'remarque',
-      'FRAGILE\r\n( si oui mettez OUI sinon laissez vide )',
-      'ECHANGE\r\n( si oui mettez OUI sinon laissez vide )',
-      'PICK UP\r\n( si oui mettez OUI sinon laissez vide )',
-      'RECOUVREMENT\r\n( si oui mettez OUI sinon laissez vide )',
-      'STOP DESK\r\n( si oui mettez OUI sinon laissez vide )',
-      'Lien map'
-    ];
-
     worksheet.columns = [
-      { header: headers[0], key: 'trackingId', width: 20 },
-      { header: headers[1], key: 'customerName', width: 25 },
-      { header: headers[2], key: 'phone1', width: 15 },
-      { header: headers[3], key: 'phone2', width: 15 },
-      { header: headers[4], key: 'wilayaCode', width: 15 },
-      { header: headers[5], key: 'wilayaName', width: 20 },
-      { header: headers[6], key: 'commune', width: 20 },
-      { header: headers[7], key: 'address', width: 30 },
-      { header: headers[8], key: 'productName', width: 25 },
-      { header: headers[9], key: 'weight', width: 10 },
-      { header: headers[10], key: 'totalAmount', width: 15 },
-      { header: headers[11], key: 'notes', width: 20 },
-      { header: headers[12], key: 'fragile', width: 15 },
-      { header: headers[13], key: 'exchange', width: 15 },
-      { header: headers[14], key: 'pickup', width: 15 },
-      { header: headers[15], key: 'recovery', width: 15 },
-      { header: headers[16], key: 'stopDesk', width: 15 },
-      { header: headers[17], key: 'mapLink', width: 20 }
+      { header: ecotrackHeaders[0], key: 'trackingId', width: 20 },
+      { header: ecotrackHeaders[1], key: 'customerName', width: 25 },
+      { header: ecotrackHeaders[2], key: 'phone1', width: 15 },
+      { header: ecotrackHeaders[3], key: 'phone2', width: 15 },
+      { header: ecotrackHeaders[4], key: 'wilayaCode', width: 15 },
+      { header: ecotrackHeaders[5], key: 'wilayaName', width: 20 },
+      { header: ecotrackHeaders[6], key: 'commune', width: 20 },
+      { header: ecotrackHeaders[7], key: 'address', width: 30 },
+      { header: ecotrackHeaders[8], key: 'productName', width: 25 },
+      { header: ecotrackHeaders[9], key: 'weight', width: 10 },
+      { header: ecotrackHeaders[10], key: 'totalAmount', width: 15 },
+      { header: ecotrackHeaders[11], key: 'notes', width: 20 },
+      { header: ecotrackHeaders[12], key: 'fragile', width: 15 },
+      { header: ecotrackHeaders[13], key: 'exchange', width: 15 },
+      { header: ecotrackHeaders[14], key: 'pickup', width: 15 },
+      { header: ecotrackHeaders[15], key: 'recovery', width: 15 },
+      { header: ecotrackHeaders[16], key: 'stopDesk', width: 15 },
+      { header: ecotrackHeaders[17], key: 'mapLink', width: 20 }
     ];
 
     // Style header row (Ecotrack style)
@@ -211,82 +200,88 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
     worksheet.getRow(1).alignment = { wrapText: true, vertical: 'middle', horizontal: 'center' };
     worksheet.getRow(1).height = 40;
 
-    // A mapping helper for Wilaya Codes (Algeria)
-    // Basic mapping matching common Algerian Wilaya codes (1 to 58)
-    const getWilayaCode = (name) => {
-      if (!name) return '';
-      const wName = name.toLowerCase();
-      // Try to find if there's a number at the start of the string like "47 ghardaia"
-      const numMatch = name.match(/^(0?[1-9]|[1-4][0-9]|5[0-8])\b/);
-      if (numMatch) return numMatch[1].replace(/^0+/, ''); // strip leading zero
-      
-      const wilayas = {
-        'adrar': 1, 'chlef': 2, 'laghouat': 3, 'oum el bouaghi': 4, 'batna': 5, 'bejaia': 6, 'biskra': 7, 
-        'bechar': 8, 'blida': 9, 'bouira': 10, 'tamanrasset': 11, 'tebessa': 12, 'tlemcen': 13, 'tiaret': 14, 
-        'tizi ouzou': 15, 'alger': 16, 'djelfa': 17, 'jijel': 18, 'setif': 19, 'saida': 20, 'skikda': 21, 
-        'sidi bel abbes': 22, 'annaba': 23, 'guelma': 24, 'constantine': 25, 'medea': 26, 'mostaganem': 27, 
-        'msila': 28, 'mascara': 29, 'ouargla': 30, 'oran': 31, 'el bayadh': 32, 'illizi': 33, 
-        'bordj bou arreridj': 34, 'boumerdes': 35, 'el tarf': 36, 'tindouf': 37, 'tissemsilt': 38, 
-        'el oued': 39, 'khenchela': 40, 'souk ahras': 41, 'tipaza': 42, 'mila': 43, 'ain defla': 44, 
-        'naama': 45, 'ain temouchent': 46, 'ghardaia': 47, 'relizane': 48, 'timimoun': 49, 
-        'bordj badji mokhtar': 50, 'ouled djellal': 51, 'beni abbes': 52, 'in salah': 53, 'in guezzam': 54, 
-        'touggourt': 55, 'djanet': 56, 'el mghair': 57, 'el meniaa': 58
-      };
-      
-      for (const [key, value] of Object.entries(wilayas)) {
-        if (wName.includes(key)) return value;
-      }
-      return '';
-    };
+
 
     // ========================================================================
     // Add order data rows
     // ========================================================================
-    confirmedOrders.forEach((order) => {
-      let phone = order.customerData.phone || '';
-      
-      // Format number to be valid for Ecotrack (0xxxxxxxxx)
-      if (phone.startsWith('+213')) phone = '0' + phone.substring(4);
-      if (phone.startsWith('00213')) phone = '0' + phone.substring(5);
-      phone = phone.replace(/[^0-9]/g, '');
+    confirmedOrders.forEach((order, idx) => {
+      try {
+        // ✅ استخراج الحقول الأساسية من الطلب
+        const customerName = order.customerData.name || '';
+        const rawPhone = order.customerData.phone || '';
+        const rawWilaya = order.customerData.wilaya || '';
+        const addressStr = order.customerData.address || '';
+        const productName = order.products?.[0]?.name || 'منتج';
+        const amount = order.totalAmountDzd || 0;
 
-      let wilayaFullName = order.customerData.wilaya || '';
-      let wCode = getWilayaCode(wilayaFullName);
-      
-      let communeName = '';
-      let addressStr = order.customerData.address || '';
-      
-      // If address contains commune somehow, we take part, otherwise placeholder
-      // For now, if "Wilaya Commune" format is used in shopify:
-      const wParts = wilayaFullName.split(' ');
-      if (wParts.length > 1) {
-        communeName = wParts.slice(1).join(' '); // Best guess for commune
-        wilayaFullName = wParts[0]; 
+        // ✅ تنسيق الهاتف باستخدام المكتبة
+        const phone = formatPhoneNumber(rawPhone);
+        if (!phone) {
+          console.warn(`⚠️ Row ${idx + 2}: رقم هاتف غير صحيح: ${rawPhone}`);
+        }
+
+        // ✅ استخراج كود الولاية من الاسم
+        let wilayaCode = getWilayaCode(rawWilaya);
+        let wilayaName = rawWilaya;
+
+        if (wilayaCode) {
+          wilayaName = getWilayaName(wilayaCode, 'ar'); // احصل على الاسم الفرنسي إن أمكن
+        } else {
+          console.warn(`⚠️ Row ${idx + 2}: لم أتمكن من استخراج كود الولاية من: ${rawWilaya}`);
+          wilayaCode = ''; // اترك فارغ إذا لم نجد
+        }
+
+        // ✅ استخراج البلدية من العنوان أو الولاية
+        let commune = '';
+        if (addressStr.includes(',')) {
+          const parts = addressStr.split(',');
+          commune = parts[0].trim(); // أول جزء = البلدية عادة
+        } else {
+          commune = wilayaName; // الحد الأدنى: اسم الولاية
+        }
+
+        // ✅ التحقق من الحقول الإلزامية
+        const validation = validateMandatoryFields({
+          customerName,
+          phone,
+          wilayaCode,
+          commune,
+          address: addressStr,
+          product: productName,
+          amount
+        });
+
+        if (!validation.isValid) {
+          // اطبع التحذيرات لكن أضف الطلب بأي حال
+          console.warn(`⚠️ Row ${idx + 2} (${order.trackingId}):`);
+          validation.errors.forEach(err => console.warn(`   ${err}`));
+        }
+
+        // ✅ أضف الصف إلى الـ Excel
+        worksheet.addRow({
+          trackingId: order.trackingId || '',
+          customerName: customerName,
+          phone1: phone,
+          phone2: '',
+          wilayaCode: wilayaCode || '', // قد يكون فارغ إذا لم نعثر عليه
+          wilayaName: wilayaName,
+          commune: commune,
+          address: addressStr,
+          productName: productName,
+          weight: order.weight || '', // إذا كان متوفر في الطلب
+          totalAmount: amount,
+          notes: `Order: ${order.trackingId}`,
+          fragile: '',
+          exchange: '',
+          pickup: '',
+          recovery: '',
+          stopDesk: '',
+          mapLink: ''
+        });
+      } catch (err) {
+        console.error(`❌ خطأ في معالجة الصف ${idx + 2}:`, err.message);
       }
-      if (!communeName) communeName = addressStr.split(',')[0] || wilayaFullName;
-
-      const productName = order.products?.[0]?.name || 'شوكولاتة';
-
-      worksheet.addRow({
-        trackingId: order.trackingId,
-        customerName: order.customerData.name,
-        phone1: phone,
-        phone2: '',
-        wilayaCode: wCode,
-        wilayaName: wilayaFullName,
-        commune: communeName,
-        address: addressStr || communeName,
-        productName: productName,
-        weight: '',
-        totalAmount: order.totalAmountDzd,
-        notes: '',
-        fragile: '',
-        exchange: '',
-        pickup: '',
-        recovery: '',
-        stopDesk: '',
-        mapLink: ''
-      });
     });
 
     // ========================================================================
