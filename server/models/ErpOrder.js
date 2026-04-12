@@ -33,11 +33,24 @@ const erpOrderSchema = new mongoose.Schema({
     required: true
   },
   
+  // --------------- التأكيد (Confirmation Status) ---------------
+  isConfirmed: { // تم تأكيد الطلبية بعد التواصل مع العميل
+    type: Boolean,
+    default: false
+  },
+  confirmedAt: { // تاريخ تأكيد الطلبية
+    type: Date
+  },
+  confirmedBy: { // معرّف الشخص الذي أكّد الطلبية (Admin ID)
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  
   // --------------- اللوجستيات (Delivery Status) ---------------
   status: {
     type: String, // من قيد التوصيل إلى مستلمة، مسددة، أو مرتجعة
-    enum: ['pending', 'shipped', 'delivered', 'paid', 'returned'],
-    default: 'pending'
+    enum: ['pending', 'shipped', 'delivered', 'paid', 'returned', 'unconfirmed'],
+    default: 'unconfirmed' // تغيير الحالة الافتراضية إلى unconfirmed
   },
   deliveryCompany: { // ياليدين، ZR، أندرسون وغيرها لمطابقة ملفاتها
     type: String

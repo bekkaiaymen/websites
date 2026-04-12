@@ -19,6 +19,7 @@ import AdminOrderTracking from './pages/AdminOrderTracking';
 import NewOrder from './pages/NewOrder';
 import MerchantLogin from './pages/MerchantLogin';
 import MerchantDashboard from './pages/MerchantDashboard';
+import ShopifyOrders from './pages/ShopifyOrders';
 
 const App = () => {
   return (
@@ -40,12 +41,14 @@ const App = () => {
         <Route path="/admin/ecotrack" element={<ProtectedRoute element={<AdminEcotrack />} allowedRoles={['admin', 'superadmin']} />} />
         <Route path="/admin/settings" element={<ProtectedRoute element={<AdminSettings />} allowedRoles={['admin', 'superadmin']} />} />
         <Route path="/admin/tracking" element={<ProtectedRoute element={<AdminOrderTracking />} allowedRoles={['admin', 'superadmin']} />} />
+        <Route path="/admin/shopify-orders" element={<ProtectedRoute element={<ShopifyOrders />} allowedRoles={['admin', 'superadmin']} />} />
         <Route path="/new-order" element={<ProtectedRoute element={<NewOrder />} />} />
         
         {/* Merchant Portal Routes */}
         <Route path="/merchant" element={<Navigate to="/merchant/dashboard" replace />} />
         <Route path="/merchant/login" element={<MerchantLogin />} />
         <Route path="/merchant/dashboard" element={<MerchantProtectedRoute element={<MerchantDashboard />} />} />
+        <Route path="/merchant/shopify-orders" element={<MerchantProtectedRoute element={<ShopifyOrders />} />} />
         
         {/* Catch all - redirect to merchant login */}
         <Route path="*" element={<Navigate to="/merchant/login" replace />} />

@@ -429,6 +429,9 @@ app.use('/api/erp/expenses', authenticateToken, expenseRouter);
 app.use('/api/merchant', require('./routes/merchantAuth'));
 app.use('/api/merchant', require('./routes/merchantDashboard'));
 
+// ============ ORDER CONFIRMATION & EXPORT ROUTES (NEW) ============
+app.use('/api/orders', require('./routes/orderConfirmation'));
+
 // ============ ADMIN AUTHENTICATION ENDPOINTS ============
 
 // POST /api/admin/login - Admin login
