@@ -48,7 +48,6 @@ const Navbar = () => {
           <a href="/" onClick={() => setIsOpen(false)} className="text-brand-cream text-sm hover:text-brand-gold py-2 px-2 rounded hover:bg-brand-gold/10 transition">الرئيسية</a>
           <a href="/#custom-box" onClick={() => setIsOpen(false)} className="text-brand-cream text-sm hover:text-brand-gold py-2 px-2 rounded hover:bg-brand-gold/10 transition">صمم هديتك</a>
           <a href="/#products" onClick={() => setIsOpen(false)} className="text-brand-cream text-sm hover:text-brand-gold py-2 px-2 rounded hover:bg-brand-gold/10 transition">المجموعات الفاخرة</a>
-          <a href="/admin" onClick={() => setIsOpen(false)} className="text-brand-cream text-sm hover:text-brand-gold py-2 px-2 rounded hover:bg-brand-gold/10 transition">لوحة التحكم</a>
           <a 
             href="https://wa.me/213664021599" 
             className="flex items-center gap-2 text-brand-gold text-sm py-2 px-2 rounded hover:bg-brand-gold/10 transition font-bold"
