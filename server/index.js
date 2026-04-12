@@ -9,9 +9,12 @@ const Product = require('./models/Product');
 const Admin = require('./models/Admin');
 const Expense = require('./models/Expense');
 const Hint = require('./models/Hint');
+const Settings = require('./models/Settings');
 const shopifyWebhooksRouter = require('./routes/shopifyWebhooks');
 const manualOrdersRouter = require('./routes/manualOrders');
 const expenseRouter = require('./routes/expense');
+const settingsRouter = require('./routes/settings');
+const fulfillmentRouter = require('./routes/fulfillment');
 
 require('dotenv').config();
 
@@ -406,6 +409,10 @@ app.use('/api/erp/reconciliation', authenticateToken, require('./routes/erpRecon
 app.use('/api/erp/invoices', authenticateToken, require('./routes/erpInvoices'));
 app.use('/api/erp/merchants', authenticateToken, require('./routes/erpMerchants'));
 app.use('/api/erp/ecotrack', authenticateToken, require('./routes/ecotrackIntegration'));
+
+// ============ SETTINGS & FULFILLMENT ROUTES (NEW) ============
+app.use('/api/erp', settingsRouter);
+app.use('/api/erp', authenticateToken, fulfillmentRouter);
 
 // ============ SHOPIFY WEBHOOK ROUTES ============
 app.use('/api/erp/webhooks/shopify', shopifyWebhooksRouter);

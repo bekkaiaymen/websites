@@ -33,7 +33,7 @@ const OrderSchema = new mongoose.Schema({
   // System Fields
   status: {
     type: String,
-    enum: ['Pending', 'Confirmed', 'Delivered', 'Returned', 'Cancelled'],
+    enum: ['Pending', 'Confirmed', 'Delivered', 'Returned', 'Cancelled', 'pending', 'processing', 'shipped', 'fulfilled', 'cancelled'],
     default: 'Pending'
   },
   total: {
@@ -44,10 +44,57 @@ const OrderSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  
+  // Fulfillment & Tracking Fields (NEW)
+  fulfillmentStatus: {
+    type: String,
+    enum: ['pending', 'processing', 'shipped', 'fulfilled', 'cancelled'],
+    default: 'pending',
+    description: 'Order fulfillment status for new system'
+  },
+  trackingNumber: {
+    type: String,
+    description: 'Shipping/Tracking number'
+  },
+  estimatedDelivery: {
+    type: Date,
+    description: 'Estimated delivery date'
+  },
+  deliveredAt: {
+    type: Date,
+    description: 'Actual delivery date'
+  },
+  fulfillmentCompleted: {
+    type: Boolean,
+    default: false,
+    description: 'Whether fulfillment is complete and profit calculated'
+  },
+  
+  // Profit Tracking
+  platformCommission: {
+    type: Number,
+    default: 0,
+    description: 'Platform commission amount'
+  },
+  fulfillmentFee: {
+    type: Number,
+    default: 0,
+    description: 'Fulfillment fee deducted'
+  },
+  profit: {
+    type: Number,
+    default: 0,
+    description: 'Calculated profit for this order'
+  },
+  
   notes: {
     type: String
   },
   createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
     type: Date,
     default: Date.now
   }
