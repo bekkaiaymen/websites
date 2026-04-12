@@ -251,10 +251,29 @@ async function handleShopifyOrderCreate(req, res) {
     // STEP 3: Extract Shopify Payload
     // =========================================================================
 
-    const shopifyOrder = req.body; // Shopify sends JSON payload in body
+    // Parse JSON from raw body (express.raw() middleware doesn't auto-parse)
+    let shopifyOrder;
+    try {
+      const rawBody = req.rawBody || req.body;
+      if (typeof rawBody === 'string') {
+        shopifyOrder = JSON.parse(rawBody);
+      } else if (Buffer.isBuffer(rawBody)) {
+        shopifyOrder = JSON.parse(rawBody.toString('utf8'));
+      } else {
+        shopifyOrder = rawBody;
+      }
+    } catch (parseError) {
+      console.error('❌ Shopify webhook: Failed to parse JSON payload', parseError.message);
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid JSON',
+        message: 'Failed to parse request body as JSON'
+      });
+    }
 
-    if (!shopifyOrder.id) {
+    if (!shopifyOrder || !shopifyOrder.id) {
       console.error('❌ Shopify webhook: Missing order ID in payload');
+      console.error('   Payload received:', JSON.stringify(shopifyOrder).substring(0, 200));
       return res.status(400).json({
         success: false,
         error: 'Invalid payload',
@@ -262,7 +281,7 @@ async function handleShopifyOrderCreate(req, res) {
       });
     }
 
-    console.log(`📦 Processing Shopify order: ${shopifyOrder.order_number}`);
+    console.log(`📦 Processing Shopify order: #${shopifyOrder.order_number || shopifyOrder.id}`);
 
     // =========================================================================
     // STEP 4: Data Mapping - Extract Required Fields
