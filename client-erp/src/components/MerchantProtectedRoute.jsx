@@ -10,6 +10,7 @@ import merchantAPI from '../api/merchantAPI';
 const MerchantProtectedRoute = ({ element, allowedRoles = [] }) => {
   // Check if merchant is authenticated
   const isAuthenticated = merchantAPI.isAuthenticated();
+  const merchantToken = localStorage.getItem('merchantToken');
   const merchantUser = localStorage.getItem('merchantUser');
 
   if (!isAuthenticated || !merchantToken || !merchantUser) {
