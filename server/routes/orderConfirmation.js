@@ -208,7 +208,7 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
           
           let productName = 'produit';
           if (Array.isArray(order.products) && order.products.length > 0) {
-             productName = order.products.map(p => \`\${p.name} (x\${p.quantity || 1})\`).join(', ');
+             productName = order.products.map(p => `${p.name} (x${p.quantity || 1})`).join(', ');
           } else if (order.products && order.products[0]?.name) {
              productName = order.products[0].name;
           } else if (order.productName) {
@@ -260,7 +260,7 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
             productName: productName,
             weight: order.weight || 1,
             totalAmount: amount,
-            notes: order.notes || (order.trackingId ? \`Order: \${order.trackingId}\` : ''),
+            notes: order.notes || (order.trackingId ? `Order: ${order.trackingId}` : ''),
             fragile: '',
             exchange: '',
             pickup: '',
@@ -270,7 +270,7 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
           });
 
         } catch (err) {
-          console.error(\`Error adding row for order \${order._id}:\`, err);
+          console.error(`Error adding row for order ${order._id}:`, err);
         }
       });
 
