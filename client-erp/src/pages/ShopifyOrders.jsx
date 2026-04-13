@@ -63,14 +63,14 @@ const ShopifyOrders = () => {
       // Merchant user: fetch their orders only
       fetchOrders(merchant._id);
       fetchStats(merchant._id);
-    } else if (admin?._id) {
-      // Admin user: fetch all orders
+    } else if (admin?.id || admin?._id) {
+      // Admin user: fetch all orders (check both id and _id)
       fetchOrders('all');
       fetchStats('all');
     } else {
       setLoading(false);
     }
-  }, []);
+  }, [];
 
   // ========================================================================
   // Fetch All Orders (Shopify + Manual)
@@ -195,7 +195,7 @@ const ShopifyOrders = () => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          adminId: adminUser._id
+          adminId: adminUser?.id || adminUser?._id
         })
       });
 

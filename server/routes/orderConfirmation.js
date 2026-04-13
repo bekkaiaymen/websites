@@ -63,7 +63,6 @@ router.get('/unconfirmed', authenticateToken, async (req, res) => {
     
     // Build query: if merchantId provided and valid, filter by merchant; else get all
     let query = {
-      isConfirmed: false,
       status: 'unconfirmed'
     };
     
