@@ -70,7 +70,7 @@ const ShopifyOrders = () => {
     } else {
       setLoading(false);
     }
-  }, [];
+  }, []);
 
   // ========================================================================
   // Fetch All Orders (Shopify + Manual)
