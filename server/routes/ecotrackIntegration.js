@@ -146,8 +146,9 @@ router.get('/export', async (req, res) => {
         }
 
         // Build row object with EXACT keys matching worksheet.columns
+        // NOTE: trackingId is left empty as per Ecotrack spec
         const rowData = {
-          trackingId: order.trackingId || `ORD-${order._id}`,
+          trackingId: '',
           customerName: customerName,
           phone1: rawPhone,
           phone2: order.customerData?.phone2 || '',

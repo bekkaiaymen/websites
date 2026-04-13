@@ -112,31 +112,69 @@ function calculateTotalPrice(shopifyOrder) {
  * @param {object} shippingAddress - Shopify shipping address
  * @returns {object} - Extracted address components
  */
-function extractAddressComponents(shippingAddress) {
-  if (!shippingAddress) {
-    return {
-      name: 'Unknown',
-      phone: 'No phone',
-      wilaya: 'Not specified',
-      commune: 'Not specified',
-      address: 'No address provided'
-    };
+function extractAddressComponents(shopifyOrder) {
+  // Default return value
+  const defaultReturn = {
+    name: 'Unknown',
+    phone: 'No phone',
+    wilaya: 'Not specified',
+    commune: 'Not specified',
+    address: 'No address provided'
+  };
+
+  if (!shopifyOrder) {
+    return defaultReturn;
   }
 
-  // Shopify provides: first_name, last_name, phone, province, city, address1, address2
+  const shippingAddress = shopifyOrder.shipping_address || {};
+  const noteAttributes = shopifyOrder.note_attributes || [];
+
+  // Extract from Shopify shipping address as fallback
   const fullName = `${shippingAddress.first_name || ''} ${shippingAddress.last_name || ''}`.trim();
-  
-  // In Algeria context:
-  // province = Wilaya (province name in English)
-  // city = Commune
-  // address1 = Full street address
-  
+  const phone = shippingAddress.phone || 'No phone provided';
+  const address = `${shippingAddress.address1 || ''} ${shippingAddress.address2 || ''}`.trim() || 'No address';
+
+  // PRIORITY 1: Extract from WEBI LEADFORM note_attributes
+  // The COD form app injects exact dropdown values as note_attributes
+  let wilaya = 'Not specified';
+  let commune = 'Not specified';
+
+  for (const attr of noteAttributes) {
+    if (!attr || !attr.name) continue;
+
+    const attrNameLower = attr.name.toLowerCase();
+    const attrValue = (attr.value || '').trim();
+
+    // Look for wilaya
+    if ((attrNameLower.includes('wilaya') || attrNameLower.includes('state') || attrNameLower.includes('province')) && attrValue) {
+      wilaya = attrValue;
+      console.log(`   ℹ Extracted wilaya from note_attributes: "${wilaya}"`);
+    }
+
+    // Look for commune
+    if ((attrNameLower.includes('commune') || attrNameLower.includes('city') || attrNameLower.includes('baladiya')) && attrValue) {
+      commune = attrValue;
+      console.log(`   ℹ Extracted commune from note_attributes: "${commune}"`);
+    }
+  }
+
+  // PRIORITY 2: Fallback to Shopify shipping address if not found in note_attributes
+  if (wilaya === 'Not specified' && shippingAddress.province) {
+    wilaya = shippingAddress.province;
+    console.log(`   ℹ Fallback wilaya from shipping address: "${wilaya}"`);
+  }
+
+  if (commune === 'Not specified' && shippingAddress.city) {
+    commune = shippingAddress.city;
+    console.log(`   ℹ Fallback commune from shipping address: "${commune}"`);
+  }
+
   return {
     name: fullName || 'Unnamed Customer',
-    phone: shippingAddress.phone || 'No phone provided',
-    wilaya: shippingAddress.province || 'Not specified',
-    commune: shippingAddress.city || 'Not specified',
-    address: `${shippingAddress.address1 || ''} ${shippingAddress.address2 || ''}`.trim() || 'No address'
+    phone,
+    wilaya,
+    commune,
+    address
   };
 }
 
@@ -288,8 +326,7 @@ async function handleShopifyOrderCreate(req, res) {
     // =========================================================================
 
     const trackingId = generateTrackingId(shopifyOrder);
-    const shippingAddress = shopifyOrder.shipping_address;
-    const addressData = extractAddressComponents(shippingAddress);
+    const addressData = extractAddressComponents(shopifyOrder);
     const productsString = mapShopifyProducts(shopifyOrder.line_items);
     const totalPrice = calculateTotalPrice(shopifyOrder);
 
@@ -309,6 +346,7 @@ async function handleShopifyOrderCreate(req, res) {
         name: addressData.name,
         phone: addressData.phone,
         wilaya: addressData.wilaya,
+        commune: addressData.commune,
         address: addressData.address
       },
       products: [
