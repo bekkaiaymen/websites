@@ -12,13 +12,8 @@ const ErpOrder = require('../models/ErpOrder');
 const Merchant = require('../models/Merchant');
 const ExcelJS = require('exceljs');
 const mongoose = require('mongoose');
-const {
-  getWilayaCode,
-  getWilayaName,
-  formatPhoneNumber,
-  validateMandatoryFields,
-  ecotrackHeaders
-} = require('../utils/wilayasMapping');
+const { getWilayaCode, getWilayaName, formatPhoneNumber, validateMandatoryFields } = require('../utils/wilayasMapping');
+const communesMap = require('../utils/communesMap');
 
 // Middleware: Authenticate merge both JWT checks
 const authenticateToken = (req, res, next) => {
@@ -175,25 +170,25 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
     // Set up headers based on Ecotrack import format (upload_ecotrack_v31.xlsx)
     // ========================================================================
     worksheet.columns = [
-      { header: ecotrackHeaders[0], key: 'trackingId', width: 20 },
-      { header: ecotrackHeaders[1], key: 'customerName', width: 25 },
-      { header: ecotrackHeaders[2], key: 'phone1', width: 15 },
-      { header: ecotrackHeaders[3], key: 'phone2', width: 15 },
-      { header: ecotrackHeaders[4], key: 'wilayaCode', width: 15 },
-      { header: ecotrackHeaders[5], key: 'wilayaName', width: 20 },
-      { header: ecotrackHeaders[6], key: 'commune', width: 20 },
-      { header: ecotrackHeaders[7], key: 'address', width: 30 },
-      { header: ecotrackHeaders[8], key: 'productName', width: 25 },
-      { header: ecotrackHeaders[9], key: 'weight', width: 10 },
-      { header: ecotrackHeaders[10], key: 'totalAmount', width: 15 },
-      { header: ecotrackHeaders[11], key: 'notes', width: 20 },
-      { header: ecotrackHeaders[12], key: 'fragile', width: 15 },
-      { header: ecotrackHeaders[13], key: 'exchange', width: 15 },
-      { header: ecotrackHeaders[14], key: 'pickup', width: 15 },
-      { header: ecotrackHeaders[15], key: 'recovery', width: 15 },
-      { header: ecotrackHeaders[16], key: 'stopDesk', width: 15 },
-      { header: ecotrackHeaders[17], key: 'mapLink', width: 20 }
-    ];
+        { header: 'reference commande', key: 'trackingId', width: 20 },
+        { header: 'nom et prenom du destinataire*', key: 'customerName', width: 25 },
+        { header: 'telephone*', key: 'phone1', width: 15 },
+        { header: 'telephone 2', key: 'phone2', width: 15 },
+        { header: 'code wilaya*', key: 'wilayaCode', width: 15 },
+        { header: 'wilaya de livraison', key: 'wilayaName', width: 20 },
+        { header: 'commune de livraison*', key: 'commune', width: 20 },
+        { header: 'adresse de livraison*', key: 'address', width: 30 },
+        { header: 'produit*', key: 'productName', width: 25 },
+        { header: 'poids (kg)', key: 'weight', width: 10 },
+        { header: 'montant du colis*', key: 'totalAmount', width: 15 },
+        { header: 'remarque', key: 'notes', width: 20 },
+        { header: 'FRAGILE\n( si oui mettez OUI sinon laissez vide )', key: 'fragile', width: 15 },
+        { header: 'ECHANGE\n( si oui mettez OUI sinon laissez vide )', key: 'exchange', width: 15 },
+        { header: 'PICK UP\n( si oui mettez OUI sinon laissez vide )', key: 'pickup', width: 15 },
+        { header: 'RECOUVREMENT\n( si oui mettez OUI sinon laissez vide )', key: 'recovery', width: 15 },
+        { header: 'STOP DESK\n( si oui mettez OUI sinon laissez vide )', key: 'stopDesk', width: 15 },
+        { header: 'Lien map', key: 'mapLink', width: 20 }
+      ];
 
     // Style header row (Ecotrack style)
     worksheet.getRow(1).font = { bold: true };
@@ -202,89 +197,84 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
 
 
 
-    // ========================================================================
-    // Add order data rows
-    // ========================================================================
-    confirmedOrders.forEach((order, idx) => {
-      try {
-        // ✅ استخراج الحقول الأساسية من الطلب
-        const customerName = order.customerData.name || '';
-        const rawPhone = order.customerData.phone || '';
-        const rawWilaya = order.customerData.wilaya || '';
-        const addressStr = order.customerData.address || '';
-        const productName = order.products?.[0]?.name || 'منتج';
-        const amount = order.totalAmountDzd || 0;
+    // ============================================================================
+      // Add order data rows
+      // ============================================================================
+      confirmedOrders.forEach((order, idx) => {
+        try {
+          const customerName = order.customerData?.name || order.customerName || 'Unknown';
+          const rawPhone = order.customerData?.phone || order.customerPhone || '';
+          const addressStr = order.customerData?.address || order.address || '';
+          
+          let productName = 'produit';
+          if (Array.isArray(order.products) && order.products.length > 0) {
+             productName = order.products.map(p => \`\${p.name} (x\${p.quantity || 1})\`).join(', ');
+          } else if (order.products && order.products[0]?.name) {
+             productName = order.products[0].name;
+          } else if (order.productName) {
+             productName = order.productName;
+          }
 
-        // ✅ تنسيق الهاتف باستخدام المكتبة
-        const phone = formatPhoneNumber(rawPhone);
-        if (!phone) {
-          console.warn(`⚠️ Row ${idx + 2}: رقم هاتف غير صحيح: ${rawPhone}`);
+          let amount = order.totalAmountDzd || order.totalPrice || order.amount || 0;
+          if (order.deliveryCost) amount += (Number(order.deliveryCost) || 0);
+
+          const phone = formatPhoneNumber(rawPhone) || rawPhone;
+
+          let rawWilaya = order.customerData?.wilaya || order.wilayaName || '';
+          let commune = order.state || order.commune || order.customerData?.state || order.customerData?.commune || '';
+          
+          if (!commune && addressStr.includes(',')) {
+            commune = addressStr.split(',')[0].trim();
+          } else if (!commune) {
+            commune = rawWilaya;
+          }
+
+          // Match wilaya code rigorously USING communesMap
+          let wilayaCode = '';
+          const cleanCommune = commune?.trim() || '';
+          const cleanWilaya = rawWilaya?.trim() || '';
+          
+          if (cleanCommune && communesMap[cleanCommune]) {
+              wilayaCode = communesMap[cleanCommune];
+          } else if (cleanWilaya && communesMap[cleanWilaya]) {
+              wilayaCode = communesMap[cleanWilaya];
+          } else {
+              wilayaCode = getWilayaCode(rawWilaya) || getWilayaCode(commune) || '';
+          }
+
+          // Fallback parsing for integer
+          if (wilayaCode && !isNaN(Number(wilayaCode))) {
+              wilayaCode = Number(wilayaCode);
+          }
+
+          // Fill Excel Row
+          worksheet.addRow({
+            trackingId: order.trackingId || '',
+            customerName: customerName,
+            phone1: phone,
+            phone2: order.customerData?.phone2 || '',
+            wilayaCode: wilayaCode || '',
+            wilayaName: rawWilaya,
+            commune: commune,
+            address: addressStr,
+            productName: productName,
+            weight: order.weight || 1,
+            totalAmount: amount,
+            notes: order.notes || (order.trackingId ? \`Order: \${order.trackingId}\` : ''),
+            fragile: '',
+            exchange: '',
+            pickup: '',
+            recovery: '',
+            stopDesk: '',
+            mapLink: ''
+          });
+
+        } catch (err) {
+          console.error(\`Error adding row for order \${order._id}:\`, err);
         }
+      });
 
-        // ✅ استخراج كود الولاية من الاسم
-        let wilayaCode = getWilayaCode(rawWilaya);
-        let wilayaName = rawWilaya;
-
-        if (wilayaCode) {
-          wilayaName = getWilayaName(wilayaCode, 'ar'); // احصل على الاسم الفرنسي إن أمكن
-        } else {
-          console.warn(`⚠️ Row ${idx + 2}: لم أتمكن من استخراج كود الولاية من: ${rawWilaya}`);
-          wilayaCode = ''; // اترك فارغ إذا لم نجد
-        }
-
-        // ✅ استخراج البلدية من العنوان أو الولاية
-        let commune = '';
-        if (addressStr.includes(',')) {
-          const parts = addressStr.split(',');
-          commune = parts[0].trim(); // أول جزء = البلدية عادة
-        } else {
-          commune = wilayaName; // الحد الأدنى: اسم الولاية
-        }
-
-        // ✅ التحقق من الحقول الإلزامية
-        const validation = validateMandatoryFields({
-          customerName,
-          phone,
-          wilayaCode,
-          commune,
-          address: addressStr,
-          product: productName,
-          amount
-        });
-
-        if (!validation.isValid) {
-          // اطبع التحذيرات لكن أضف الطلب بأي حال
-          console.warn(`⚠️ Row ${idx + 2} (${order.trackingId}):`);
-          validation.errors.forEach(err => console.warn(`   ${err}`));
-        }
-
-        // ✅ أضف الصف إلى الـ Excel
-        worksheet.addRow({
-          trackingId: order.trackingId || '',
-          customerName: customerName,
-          phone1: phone,
-          phone2: '',
-          wilayaCode: wilayaCode || '', // قد يكون فارغ إذا لم نعثر عليه
-          wilayaName: wilayaName,
-          commune: commune,
-          address: addressStr,
-          productName: productName,
-          weight: order.weight || '', // إذا كان متوفر في الطلب
-          totalAmount: amount,
-          notes: `Order: ${order.trackingId}`,
-          fragile: '',
-          exchange: '',
-          pickup: '',
-          recovery: '',
-          stopDesk: '',
-          mapLink: ''
-        });
-      } catch (err) {
-        console.error(`❌ خطأ في معالجة الصف ${idx + 2}:`, err.message);
-      }
-    });
-
-    // ========================================================================
+      // ========================================================================
     // Set response headers for file download
     // ========================================================================
     res.setHeader(

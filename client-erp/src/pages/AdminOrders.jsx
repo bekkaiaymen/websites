@@ -51,7 +51,23 @@ const AdminOrders = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
-      setOrders(Array.isArray(data) ? data : []);
+      
+      let safeData = [];
+      if (Array.isArray(data)) {
+        safeData = data.map(order => {
+          try {
+            return {
+              ...order,
+              merchantName: order.merchant?.name || 'Unknown',
+              customerName: order.customerData?.name || order.customerName || 'غير محدد',
+              customerPhone: order.customerData?.phone || order.customerPhone || 'غير محدد'
+            };
+          } catch(e) {
+            return order;
+          }
+        });
+      }
+      setOrders(safeData);
       setError('');
     } catch (err) {
       console.error('Error fetching orders:', err);

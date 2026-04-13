@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminNavbar from '../components/AdminNavbar';
 import { Package, Truck, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { buildApiUrl } from '../api';
 
 const AdminOrderTracking = () => {
   const [orders, setOrders] = useState([]);
@@ -20,14 +21,31 @@ const AdminOrderTracking = () => {
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch('/api/orders', {
+      setLoading(true);
+      const response = await fetch(buildApiUrl('/api/orders'), {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
       if (response.ok) {
         const data = await response.json();
-        setOrders(data);
+        if (Array.isArray(data)) {
+          const safeData = data.map(order => {
+            try {
+              return {
+                ...order,
+                merchantName: order.merchant?.name || 'Unknown',
+                customerName: order.customerName || order.customerData?.name || 'غير محدد',
+                customerPhone: order.customerPhone || order.customerData?.phone || 'غير محدد'
+              };
+            } catch (e) {
+              return order;
+            }
+          });
+          setOrders(safeData);
+        } else {
+           setOrders([]);
+        }
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
