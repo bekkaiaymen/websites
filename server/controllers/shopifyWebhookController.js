@@ -107,10 +107,10 @@ function calculateTotalPrice(shopifyOrder) {
 }
 
 /**
- * Extract customer address components from Shopify
+ * Extract customer address components and delivery options from Shopify
  * 
  * @param {object} shippingAddress - Shopify shipping address
- * @returns {object} - Extracted address components
+ * @returns {object} - Extracted address components and delivery flags
  */
 function extractAddressComponents(shopifyOrder) {
   // Default return value
@@ -119,7 +119,9 @@ function extractAddressComponents(shopifyOrder) {
     phone: 'No phone',
     wilaya: 'Not specified',
     commune: 'Not specified',
-    address: 'No address provided'
+    address: 'No address provided',
+    isStopDesk: false,
+    isFragile: false
   };
 
   if (!shopifyOrder) {
@@ -138,23 +140,41 @@ function extractAddressComponents(shopifyOrder) {
   // The COD form app injects exact dropdown values as note_attributes
   let wilaya = 'Not specified';
   let commune = 'Not specified';
+  let isStopDesk = false;
+  let isFragile = false;
 
   for (const attr of noteAttributes) {
     if (!attr || !attr.name) continue;
 
     const attrNameLower = attr.name.toLowerCase();
-    const attrValue = (attr.value || '').trim();
+    const attrValue = (attr.value || '').trim().toLowerCase();
 
     // Look for wilaya
-    if ((attrNameLower.includes('wilaya') || attrNameLower.includes('state') || attrNameLower.includes('province')) && attrValue) {
-      wilaya = attrValue;
+    if ((attrNameLower.includes('wilaya') || attrNameLower.includes('state') || attrNameLower.includes('province')) && attr.value && attr.value.trim()) {
+      wilaya = attr.value.trim();
       console.log(`   ℹ Extracted wilaya from note_attributes: "${wilaya}"`);
     }
 
     // Look for commune
-    if ((attrNameLower.includes('commune') || attrNameLower.includes('city') || attrNameLower.includes('baladiya')) && attrValue) {
-      commune = attrValue;
+    if ((attrNameLower.includes('commune') || attrNameLower.includes('city') || attrNameLower.includes('baladiya')) && attr.value && attr.value.trim()) {
+      commune = attr.value.trim();
       console.log(`   ℹ Extracted commune from note_attributes: "${commune}"`);
+    }
+
+    // Look for stop desk delivery option
+    if ((attrNameLower.includes('desk') || attrNameLower.includes('office') || attrNameLower.includes('مكتب') || attrNameLower.includes('stop')) && attrValue) {
+      if (attrValue.includes('yes') || attrValue.includes('true') || attrValue.includes('oui') || attrValue.includes('نعم') || attrValue.includes('مكتب')) {
+        isStopDesk = true;
+        console.log(`   ℹ Extracted Stop Desk delivery: TRUE`);
+      }
+    }
+
+    // Look for fragile/priority delivery options
+    if ((attrNameLower.includes('fragile') || attrNameLower.includes('priority') || attrNameLower.includes('delicate') || attrNameLower.includes('حساس')) && attrValue) {
+      if (attrValue.includes('yes') || attrValue.includes('true') || attrValue.includes('oui') || attrValue.includes('نعم') || attrValue.includes('حساس')) {
+        isFragile = true;
+        console.log(`   ℹ Extracted Fragile delivery: TRUE`);
+      }
     }
   }
 
@@ -174,7 +194,9 @@ function extractAddressComponents(shopifyOrder) {
     phone,
     wilaya,
     commune,
-    address
+    address,
+    isStopDesk,
+    isFragile
   };
 }
 
@@ -333,6 +355,8 @@ async function handleShopifyOrderCreate(req, res) {
     console.log(`   • Tracking ID: ${trackingId}`);
     console.log(`   • Customer: ${addressData.name}`);
     console.log(`   • Total: ${totalPrice} DZD`);
+    console.log(`   • Stop Desk: ${addressData.isStopDesk ? 'YES ✅' : 'No'}`);
+    console.log(`   • Fragile: ${addressData.isFragile ? 'YES ✅' : 'No'}`);
 
     // =========================================================================
     // STEP 5: Create ErpOrder
@@ -356,6 +380,8 @@ async function handleShopifyOrderCreate(req, res) {
           quantity: 1 // Already combined in productsString
         }
       ],
+      isStopDesk: addressData.isStopDesk,
+      isFragile: addressData.isFragile,
       totalAmountDzd: totalPrice,
       status: 'unconfirmed', // Manual confirmation required before export
       // Store Shopify order reference for tracking
