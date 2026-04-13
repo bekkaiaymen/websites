@@ -666,6 +666,7 @@ app.put('/api/orders/:id', authenticateToken, async (req, res) => {
       isStopDesk
     } = req.body;
 
+    // Build update object with proper nested structure
     const updateData = {};
     
     // Update top-level fields
@@ -676,16 +677,39 @@ app.put('/api/orders/:id', authenticateToken, async (req, res) => {
     if (isFragile !== undefined) updateData.isFragile = isFragile;
     if (isStopDesk !== undefined) updateData.isStopDesk = isStopDesk;
     
-    // Update nested customerData fields
-    if (customerName !== undefined) updateData['customerData.name'] = customerName;
-    if (customerPhone !== undefined) updateData['customerData.phone'] = customerPhone;
-    if (wilaya !== undefined) updateData['customerData.wilaya'] = wilaya;
-    if (commune !== undefined) updateData['customerData.commune'] = commune;
-    if (address !== undefined) updateData['customerData.address'] = address;
+    // Build nested customerData object if any fields are provided
+    const customerDataUpdates = {};
+    let hasCustomerDataUpdates = false;
+    
+    if (customerName !== undefined) {
+      customerDataUpdates.name = customerName;
+      hasCustomerDataUpdates = true;
+    }
+    if (customerPhone !== undefined) {
+      customerDataUpdates.phone = customerPhone;
+      hasCustomerDataUpdates = true;
+    }
+    if (wilaya !== undefined) {
+      customerDataUpdates.wilaya = wilaya;
+      hasCustomerDataUpdates = true;
+    }
+    if (commune !== undefined) {
+      customerDataUpdates.commune = commune;
+      hasCustomerDataUpdates = true;
+    }
+    if (address !== undefined) {
+      customerDataUpdates.address = address;
+      hasCustomerDataUpdates = true;
+    }
+    
+    // Only set customerData if there are updates
+    if (hasCustomerDataUpdates) {
+      updateData.customerData = customerDataUpdates;
+    }
 
     const order = await ErpOrder.findByIdAndUpdate(
       id,
-      updateData,
+      { $set: updateData },
       { new: true }
     );
 
