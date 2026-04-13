@@ -140,6 +140,8 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
   try {
     const { merchantId, orderIds } = req.body;
 
+    console.log('📦 Export request received:', { merchantId, orderIdsCount: orderIds?.length || 0 });
+
     let query = {
       isConfirmed: true,
       status: 'pending'
@@ -148,18 +150,37 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
     // If it's a specific merchant, filter by their ID. Otherwise, get all.
     if (merchantId && merchantId !== 'all') {
       if (!mongoose.Types.ObjectId.isValid(merchantId)) {
-        return res.status(400).json({ error: 'Invalid merchantId' });
+        console.error('❌ Invalid merchantId format:', merchantId);
+        return res.status(400).json({ error: 'Invalid merchantId format' });
       }
       query.merchantId = new mongoose.Types.ObjectId(merchantId);
     }
 
+    // Safely handle orderIds with validation
     if (orderIds && Array.isArray(orderIds) && orderIds.length > 0) {
-      query._id = { $in: orderIds.map(id => new mongoose.Types.ObjectId(id)) };
+      try {
+        const validIds = orderIds.filter(id => mongoose.Types.ObjectId.isValid(id));
+        if (validIds.length === 0) {
+          console.error('❌ No valid order IDs in request:', orderIds);
+          return res.status(400).json({ error: 'No valid order IDs provided' });
+        }
+        if (validIds.length < orderIds.length) {
+          console.warn(`⚠️  ${orderIds.length - validIds.length} invalid IDs skipped`);
+        }
+        query._id = { $in: validIds.map(id => new mongoose.Types.ObjectId(id)) };
+      } catch (err) {
+        console.error('❌ Error processing orderIds:', err.message);
+        return res.status(400).json({ error: 'Invalid order IDs format' });
+      }
     }
 
+    console.log('🔍 Query:', JSON.stringify(query, null, 2));
     const confirmedOrders = await ErpOrder.find(query).sort({ confirmedAt: -1 });
 
+    console.log(`✅ Found ${confirmedOrders.length} confirmed orders to export`);
+
     if (confirmedOrders.length === 0) {
+      console.warn('⚠️  No confirmed orders found for export');
       return res.status(400).json({ 
         error: 'No confirmed orders to export',
         message: 'لا توجد طلبات مؤكدة لتصديرها. يرجى تأكيد الطلبات أولاً.'
@@ -309,8 +330,12 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
     ).catch(err => console.error('Error updating status after export:', err));
 
   } catch (error) {
-    console.error('Error exporting to Excel:', error);
-    res.status(500).json({ error: 'Failed to export to Excel' });
+    console.error('❌ Error exporting to Excel:', error.message);
+    console.error('   Stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Failed to export to Excel',
+      detail: error.message 
+    });
   }
 });
 
