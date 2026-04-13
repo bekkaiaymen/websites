@@ -54,11 +54,21 @@ const ShopifyOrders = () => {
   // Load Merchant Info and Orders on Mount
   // ========================================================================
   useEffect(() => {
-    const merchant = JSON.parse(localStorage.getItem('merchantUser') || '{}');
+    const merchant = JSON.parse(localStorage.getItem('merchantUser') || 'null');
+    const admin = JSON.parse(localStorage.getItem('adminUser') || 'null');
+    
     setCurrentMerchant(merchant);
+    
     if (merchant?._id) {
+      // Merchant user: fetch their orders only
       fetchOrders(merchant._id);
       fetchStats(merchant._id);
+    } else if (admin?._id) {
+      // Admin user: fetch all orders
+      fetchOrders('all');
+      fetchStats('all');
+    } else {
+      setLoading(false);
     }
   }, []);
 
@@ -72,12 +82,20 @@ const ShopifyOrders = () => {
 
       // Fetch both confirmed and unconfirmed orders
       const token = localStorage.getItem('merchantToken') || localStorage.getItem('adminToken');
+      
+      // Build URLs: if merchantId is 'all', don't include query param (admin gets all orders)
+      const unconfirmedUrl = merchantId === 'all' 
+        ? buildApiUrl('/api/orders/unconfirmed')
+        : buildApiUrl(`/api/orders/unconfirmed?merchantId=${merchantId}`);
+      const confirmedUrl = merchantId === 'all'
+        ? buildApiUrl('/api/orders/confirmed')
+        : buildApiUrl(`/api/orders/confirmed?merchantId=${merchantId}`);
 
       const [unconfirmedRes, confirmedRes] = await Promise.all([
-        fetch(buildApiUrl(`/api/orders/unconfirmed?merchantId=${merchantId}`), {
+        fetch(unconfirmedUrl, {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
-        fetch(buildApiUrl(`/api/orders/confirmed?merchantId=${merchantId}`), {
+        fetch(confirmedUrl, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       ]);
@@ -106,7 +124,11 @@ const ShopifyOrders = () => {
   const fetchStats = async (merchantId) => {
     try {
       const token = localStorage.getItem('merchantToken') || localStorage.getItem('adminToken');
-      const res = await fetch(buildApiUrl(`/api/orders/stats?merchantId=${merchantId}`), {
+      // If merchantId is 'all', don't include query param (admin gets all orders)
+      const statsUrl = merchantId === 'all'
+        ? buildApiUrl('/api/orders/stats')
+        : buildApiUrl(`/api/orders/stats?merchantId=${merchantId}`);
+      const res = await fetch(statsUrl, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();

@@ -23,21 +23,23 @@ const authenticateToken = (req, res, next) => {
 };
 
 // ============================================================================
-// ROUTE 1: GET /api/orders/confirmed - Get all confirmed orders (for merchant)
+// ROUTE 1: GET /api/orders/confirmed - Get all confirmed orders (for merchant or admin)
 // ============================================================================
 router.get('/confirmed', authenticateToken, async (req, res) => {
   try {
     const merchantId = req.query.merchantId;
     
-    if (!merchantId || !mongoose.Types.ObjectId.isValid(merchantId)) {
-      return res.status(400).json({ error: 'Invalid merchantId' });
-    }
-
-    const confirmedOrders = await ErpOrder.find({
-      merchantId,
+    // Build query: if merchantId provided and valid, filter by merchant; else get all
+    let query = {
       isConfirmed: true,
       status: { $ne: 'returned' } // Exclude returned orders
-    })
+    };
+    
+    if (merchantId && mongoose.Types.ObjectId.isValid(merchantId)) {
+      query.merchantId = merchantId;
+    }
+
+    const confirmedOrders = await ErpOrder.find(query)
       .sort({ confirmedAt: -1 })
       .populate('confirmedBy', 'name email');
 
@@ -53,21 +55,23 @@ router.get('/confirmed', authenticateToken, async (req, res) => {
 });
 
 // ============================================================================
-// ROUTE 2: GET /api/orders/unconfirmed - Get all unconfirmed orders (for merchant)
+// ROUTE 2: GET /api/orders/unconfirmed - Get all unconfirmed orders (for merchant or admin)
 // ============================================================================
 router.get('/unconfirmed', authenticateToken, async (req, res) => {
   try {
     const merchantId = req.query.merchantId;
     
-    if (!merchantId || !mongoose.Types.ObjectId.isValid(merchantId)) {
-      return res.status(400).json({ error: 'Invalid merchantId' });
-    }
-
-    const unconfirmedOrders = await ErpOrder.find({
-      merchantId,
+    // Build query: if merchantId provided and valid, filter by merchant; else get all
+    let query = {
       isConfirmed: false,
       status: 'unconfirmed'
-    })
+    };
+    
+    if (merchantId && mongoose.Types.ObjectId.isValid(merchantId)) {
+      query.merchantId = merchantId;
+    }
+
+    const unconfirmedOrders = await ErpOrder.find(query)
       .sort({ createdAt: -1 });
 
     res.json({
@@ -305,18 +309,20 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
 });
 
 // ============================================================================
-// ROUTE 5: GET /api/orders/stats - Get order statistics
+// ROUTE 5: GET /api/orders/stats - Get order statistics (for merchant or admin)
 // ============================================================================
 router.get('/stats', authenticateToken, async (req, res) => {
   try {
     const merchantId = req.query.merchantId;
 
-    if (!merchantId || !mongoose.Types.ObjectId.isValid(merchantId)) {
-      return res.status(400).json({ error: 'Invalid merchantId' });
+    // Build match query: if merchantId provided and valid, filter by merchant; else get all
+    let matchQuery = {};
+    if (merchantId && mongoose.Types.ObjectId.isValid(merchantId)) {
+      matchQuery.merchantId = new mongoose.Types.ObjectId(merchantId);
     }
 
     const stats = await ErpOrder.aggregate([
-      { $match: { merchantId: new mongoose.Types.ObjectId(merchantId) } },
+      { $match: matchQuery },
       {
         $group: {
           _id: null,
