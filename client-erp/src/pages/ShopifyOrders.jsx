@@ -614,17 +614,28 @@ const ShopifyOrders = () => {
 
                       {/* Details */}
                       <td className="px-6 py-4">
-                        <div className="text-gray-300 text-sm">
+                        <div className="text-gray-300 text-sm space-y-1">
                           <p className="flex items-center gap-1">
                             <MapPin className="w-4 h-4 text-brand-gold" />
                             {order.customerData?.wilaya}
                           </p>
-                          <p className="text-gray-500 mt-1 line-clamp-1">
+                          <p className="text-gray-500 line-clamp-1">
                             {order.customerData?.address}
                           </p>
-                          <p className="text-gray-500 mt-1">
+                          <p className="text-gray-500">
                             {order.products?.[0]?.name}
                           </p>
+                          {/* Delivery Type Indicator */}
+                          <p className="flex items-center gap-1 pt-1">
+                            {order.isStopDesk ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded text-xs">
+                                📦 توصيل للمكتب
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded text-xs">
+                                🏠 توصيل للمنزل
+                              </span>
+                            )}\n                          </p>
                         </div>
                       </td>
 
@@ -654,7 +665,7 @@ const ShopifyOrders = () => {
                                 ...order.customerData,
                                 commune: order.customerData?.commune || order.customerData?.wilaya || ''
                               },
-                              isStopDesk: order.isStopDesk !== false // Default to true for Stop Desk
+                              isStopDesk: order.isStopDesk === true // Correctly reflect the actual Stop Desk status
                             });
                           }}
                           className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
