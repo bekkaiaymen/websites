@@ -664,7 +664,8 @@ app.put('/api/orders/:id', authenticateToken, async (req, res) => {
       totalAmountDzd,
       notes,
       isFragile,
-      isStopDesk
+      isStopDesk,
+      isConfirmed
     } = req.body;
 
     // Validate ObjectId
@@ -682,6 +683,7 @@ app.put('/api/orders/:id', authenticateToken, async (req, res) => {
     if (notes !== undefined) updateData.notes = notes;
     if (isFragile !== undefined) updateData.isFragile = isFragile;
     if (isStopDesk !== undefined) updateData.isStopDesk = isStopDesk;
+    if (isConfirmed !== undefined) updateData.isConfirmed = isConfirmed;
     
     // Build nested customerData object if any fields are provided
     const customerDataUpdates = {};

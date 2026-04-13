@@ -50,6 +50,8 @@ const ShopifyOrders = () => {
     unconfirmed: 0
   });
   const [editingOrder, setEditingOrder] = useState(null);
+  const [showSelectionModal, setShowSelectionModal] = useState(false);
+  const [updatingOrderStatus, setUpdatingOrderStatus] = useState(null);
 
   // ========================================================================
   // Load Merchant Info and Orders on Mount
@@ -369,10 +371,80 @@ const ShopifyOrders = () => {
   };
 
   const selectAllConfirmed = () => {
-    const confirmedIds = filteredOrders
-      .filter(o => o.isConfirmed)
-      .map(o => o._id);
-    setSelectedOrders(confirmedIds);
+    // Open selection modal instead of just selecting confirmed
+    setShowSelectionModal(true);
+  };
+
+  const selectAllOrders = () => {
+    // Select ALL orders (confirmed and unconfirmed)
+    setSelectedOrders(orders.map(o => o._id));
+  };
+
+  const selectAllOrdersInModal = () => {
+    // Select all orders for export
+    setSelectedOrders(orders.map(o => o._id));
+  };
+
+  const clearAllSelections = () => {
+    setSelectedOrders([]);
+  };
+
+  // ========================================================================
+  // Toggle Order Confirmation Status
+  // ========================================================================
+  const toggleOrderConfirmation = async (orderId) => {
+    try {
+      const order = orders.find(o => o._id === orderId);
+      if (!order) return;
+
+      setUpdatingOrderStatus(orderId);
+      const token = localStorage.getItem('merchantToken') || localStorage.getItem('adminToken');
+
+      // Update order status
+      const res = await fetch(buildApiUrl(`/api/orders/${orderId}`), {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          isConfirmed: !order.isConfirmed // Toggle confirmation
+        })
+      });
+
+      if (!res.ok) throw new Error('فشل تحديث الحالة');
+
+      // Update local state
+      setOrders(prev => 
+        prev.map(o => 
+          o._id === orderId 
+            ? { ...o, isConfirmed: !o.isConfirmed }
+            : o
+        )
+      );
+
+      applyFilters(
+        orders.map(o => 
+          o._id === orderId 
+            ? { ...o, isConfirmed: !o.isConfirmed }
+            : o
+        ),
+        filterStatus,
+        searchTerm
+      );
+
+      // Refresh stats
+      fetchStats(currentMerchant?._id || 'all');
+
+      // Show success message
+      const newStatus = !order.isConfirmed ? 'مؤكدة' : 'غير مؤكدة';
+      alert(`✅ تم تحديث حالة الطلب ليصبح: ${newStatus}`);
+    } catch (err) {
+      console.error('Error updating order status:', err);
+      alert('❌ فشل تحديث حالة الطلب: ' + err.message);
+    } finally {
+      setUpdatingOrderStatus(null);
+    }
   };
 
   // ========================================================================
@@ -672,14 +744,28 @@ const ShopifyOrders = () => {
                         >
                           ✏️ تفاصيل وتعديل
                         </button>
-                        {!order.isConfirmed && (
-                          <button
-                            onClick={() => confirmOrder(order._id)}
-                            className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded transition-colors"
-                          >
-                            ✅ تأكيد
-                          </button>
-                        )}
+                        
+                        {/* Toggle Confirmation Button */}
+                        <button
+                          onClick={() => toggleOrderConfirmation(order._id)}
+                          disabled={updatingOrderStatus === order._id}
+                          className={`px-3 py-1 text-white text-sm rounded transition-colors ${
+                            order.isConfirmed
+                              ? 'bg-orange-600 hover:bg-orange-700'
+                              : 'bg-green-600 hover:bg-green-700'
+                          } disabled:opacity-50`}
+                        >
+                          {updatingOrderStatus === order._id ? (
+                            <>
+                              <Loader2 className="w-3 h-3 inline animate-spin mr-1" />
+                              جاري التحديث...
+                            </>
+                          ) : order.isConfirmed ? (
+                            '🔄 إلغاء التأكيد'
+                          ) : (
+                            '✅ تأكيد'
+                          )}
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -819,6 +905,84 @@ const ShopifyOrders = () => {
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
               >
                 ✅ حفظ التغييرات
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Selection Modal - Choose Orders for Export */}
+      {showSelectionModal && (
+        <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1a1410] border border-brand-gold/30 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-4">
+            <h2 className="text-xl font-bold text-white mb-4">📋 اختر الطلبيات للتصدير</h2>
+            
+            {/* Action Buttons */}
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={selectAllOrdersInModal}
+                className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
+              >
+                ✅ تحديد الكل
+              </button>
+              <button
+                onClick={clearAllSelections}
+                className="px-3 py-2 bg-gray-700 hover:bg-gray-800 text-white text-sm rounded transition-colors"
+              >
+                ❌ إلغاء التحديد
+              </button>
+              <span className="ml-auto text-gray-400 text-sm pt-2">
+                {selectedOrders.length} من {orders.length} محدد
+              </span>
+            </div>
+
+            {/* Orders List */}
+            <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+              {orders.map(order => (
+                <label key={order._id} className="flex items-start gap-3 p-3 bg-[#2a1f15] hover:bg-[#3a2f25] rounded cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={selectedOrders.includes(order._id)}
+                    onChange={() => toggleOrderSelection(order._id)}
+                    className="w-4 h-4 mt-1"
+                  />
+                  <div className="flex-1">
+                    <p className="text-gray-200 font-semibold">{order.customerData?.name}</p>
+                    <p className="text-gray-400 text-sm">رقم التتبع: {order.trackingId}</p>
+                    <p className="text-gray-400 text-sm">الولاية: {order.customerData?.wilaya}</p>
+                    <p className="text-gray-400 text-sm">المبلغ: {order.totalAmountDzd} د.ج</p>
+                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs mt-2 ${
+                      order.isConfirmed 
+                        ? 'bg-green-500/20 text-green-300'
+                        : 'bg-yellow-500/20 text-yellow-300'
+                    }`}>
+                      {order.isConfirmed ? '✅ مؤكدة' : '⏳ بانتظار التأكيد'}
+                    </span>
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3 justify-end pt-4 border-t border-brand-gold/30">
+              <button
+                onClick={() => {
+                  setShowSelectionModal(false);
+                  setSelectedOrders([]);
+                }}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded transition-colors"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={() => {
+                  setShowSelectionModal(false);
+                  exportToExcel();
+                }}
+                disabled={selectedOrders.length === 0}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded transition-colors"
+              >
+                📥 تصدير ({selectedOrders.length} مختار)
               </button>
             </div>
           </div>
