@@ -699,40 +699,6 @@ app.put('/api/orders/:id', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to update order' });
   }
 });
-  try {
-    const { id } = req.params;
-    const { status, deliveryCost, customerName, customerPhone, wilaya, address, total, notes } = req.body;
-
-    if (status && !['Pending', 'Confirmed', 'Delivered', 'Returned', 'Cancelled'].includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
-    }
-
-    const updateData = {};
-    if (status !== undefined) updateData.status = status;
-    if (deliveryCost !== undefined) updateData.deliveryCost = deliveryCost;
-    if (customerName !== undefined) updateData.customerName = customerName;
-    if (customerPhone !== undefined) updateData.customerPhone = customerPhone;
-    if (wilaya !== undefined) updateData.wilaya = wilaya;
-    if (address !== undefined) updateData.address = address;
-    if (total !== undefined) updateData.total = total;
-    if (notes !== undefined) updateData.notes = notes;
-
-    const order = await Order.findByIdAndUpdate(
-      id,
-      { $set: updateData },
-      { new: true }
-    );
-
-    if (!order) {
-      return res.status(404).json({ error: 'Order not found' });
-    }
-
-    res.json(order);
-  } catch (error) {
-    console.error('Error updating order:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
 
 // DELETE /api/orders/:id - Delete order
 app.delete('/api/orders/:id', authenticateToken, async (req, res) => {
