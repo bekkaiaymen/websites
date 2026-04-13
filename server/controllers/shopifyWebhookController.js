@@ -107,10 +107,10 @@ function calculateTotalPrice(shopifyOrder) {
 }
 
 /**
- * Extract customer address components and delivery options from Shopify
+ * Extract customer address components from Shopify
  * 
- * @param {object} shippingAddress - Shopify shipping address
- * @returns {object} - Extracted address components and delivery flags
+ * @param {object} shopifyOrder - Shopify order object
+ * @returns {object} - Extracted address components (name, phone, wilaya, commune, address)
  */
 function extractAddressComponents(shopifyOrder) {
   // Default return value
@@ -119,9 +119,7 @@ function extractAddressComponents(shopifyOrder) {
     phone: 'No phone',
     wilaya: 'Not specified',
     commune: 'Not specified',
-    address: 'No address provided',
-    isStopDesk: false,
-    isFragile: false
+    address: 'No address provided'
   };
 
   if (!shopifyOrder) {
@@ -140,14 +138,11 @@ function extractAddressComponents(shopifyOrder) {
   // The COD form app injects exact dropdown values as note_attributes
   let wilaya = 'Not specified';
   let commune = 'Not specified';
-  let isStopDesk = false;
-  let isFragile = false;
 
   for (const attr of noteAttributes) {
     if (!attr || !attr.name) continue;
 
     const attrNameLower = attr.name.toLowerCase();
-    const attrValue = (attr.value || '').trim().toLowerCase();
 
     // Look for wilaya
     if ((attrNameLower.includes('wilaya') || attrNameLower.includes('state') || attrNameLower.includes('province')) && attr.value && attr.value.trim()) {
@@ -159,22 +154,6 @@ function extractAddressComponents(shopifyOrder) {
     if ((attrNameLower.includes('commune') || attrNameLower.includes('city') || attrNameLower.includes('baladiya')) && attr.value && attr.value.trim()) {
       commune = attr.value.trim();
       console.log(`   ℹ Extracted commune from note_attributes: "${commune}"`);
-    }
-
-    // Look for stop desk delivery option
-    if ((attrNameLower.includes('desk') || attrNameLower.includes('office') || attrNameLower.includes('مكتب') || attrNameLower.includes('stop')) && attrValue) {
-      if (attrValue.includes('yes') || attrValue.includes('true') || attrValue.includes('oui') || attrValue.includes('نعم') || attrValue.includes('مكتب')) {
-        isStopDesk = true;
-        console.log(`   ℹ Extracted Stop Desk delivery: TRUE`);
-      }
-    }
-
-    // Look for fragile/priority delivery options
-    if ((attrNameLower.includes('fragile') || attrNameLower.includes('priority') || attrNameLower.includes('delicate') || attrNameLower.includes('حساس')) && attrValue) {
-      if (attrValue.includes('yes') || attrValue.includes('true') || attrValue.includes('oui') || attrValue.includes('نعم') || attrValue.includes('حساس')) {
-        isFragile = true;
-        console.log(`   ℹ Extracted Fragile delivery: TRUE`);
-      }
     }
   }
 
@@ -194,9 +173,7 @@ function extractAddressComponents(shopifyOrder) {
     phone,
     wilaya,
     commune,
-    address,
-    isStopDesk,
-    isFragile
+    address
   };
 }
 
@@ -232,6 +209,98 @@ function healthCheck(req, res) {
     },
     exampleUrl: 'https://prince-delivery.onrender.com/api/erp/webhooks/shopify/order-create?merchantId=69db8a4a293ad65cbe667ad4'
   });
+}
+
+/**
+ * Detect if order should be delivered to Stop Desk (bureau/pickup point)
+ * Checks multiple sources: shipping method, note attributes, and tags
+ * 
+ * Keywords: stop desk, bureau, point de relais, مكتب, point de retrait, etc.
+ * 
+ * @param {object} shopifyOrder - Shopify order object
+ * @returns {boolean} - True if Stop Desk delivery detected
+ */
+function detectStopDesk(shopifyOrder) {
+  const keywords = ['stop desk', 'stopdesk', 'bureau', 'point de relais', 'مكتب', 'point de retrait', 'bureau de poste', 'pickup point'];
+  
+  // Check 1: Shipping method title
+  if (shopifyOrder.shipping_lines && shopifyOrder.shipping_lines.length > 0) {
+    const shippingTitle = (shopifyOrder.shipping_lines[0].title || '').toLowerCase();
+    console.log(`   ℹ Checking shipping method: "${shopifyOrder.shipping_lines[0].title}"`);
+    if (keywords.some(k => shippingTitle.includes(k))) {
+      console.log(`   ✅ Stop Desk detected in shipping method`);
+      return true;
+    }
+  }
+
+  // Check 2: Note attributes (COD forms usually put delivery preference here)
+  const noteAttributes = shopifyOrder.note_attributes || [];
+  for (const attr of noteAttributes) {
+    if (!attr || !attr.value) continue;
+    const val = attr.value.toLowerCase();
+    if (keywords.some(k => val.includes(k))) {
+      console.log(`   ✅ Stop Desk detected in note_attributes: "${attr.name}"`);
+      return true;
+    }
+  }
+  
+  // Check 3: Order tags
+  if (shopifyOrder.tags) {
+    const tags = shopifyOrder.tags.toLowerCase();
+    console.log(`   ℹ Checking order tags: "${tags}"`);
+    if (keywords.some(k => tags.includes(k))) {
+      console.log(`   ✅ Stop Desk detected in order tags`);
+      return true;
+    }
+  }
+
+  console.log(`   ℹ No Stop Desk indicators found - defaulting to home delivery`);
+  return false;
+}
+
+/**
+ * Detect if order contains fragile items
+ * Checks multiple sources: note attributes, tags, product names
+ * 
+ * Keywords: fragile, delicate, priority, حساس, délicate, etc.
+ * 
+ * @param {object} shopifyOrder - Shopify order object
+ * @returns {boolean} - True if fragile items detected
+ */
+function detectFragile(shopifyOrder) {
+  const keywords = ['fragile', 'delicate', 'priority', 'حساس', 'délicate', 'cassable', 'breakable'];
+  
+  // Check 1: Note attributes
+  const noteAttributes = shopifyOrder.note_attributes || [];
+  for (const attr of noteAttributes) {
+    if (!attr || !attr.value) continue;
+    const val = attr.value.toLowerCase();
+    if (keywords.some(k => val.includes(k))) {
+      console.log(`   ✅ Fragile detected in note_attributes: "${attr.name}"`);
+      return true;
+    }
+  }
+  
+  // Check 2: Order tags
+  if (shopifyOrder.tags) {
+    const tags = shopifyOrder.tags.toLowerCase();
+    if (keywords.some(k => tags.includes(k))) {
+      console.log(`   ✅ Fragile detected in order tags`);
+      return true;
+    }
+  }
+
+  // Check 3: Product names
+  const lineItems = shopifyOrder.line_items || [];
+  for (const item of lineItems) {
+    const productName = (item.title || '').toLowerCase();
+    if (keywords.some(k => productName.includes(k))) {
+      console.log(`   ✅ Fragile detected in product: "${item.title}"`);
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**
@@ -351,12 +420,14 @@ async function handleShopifyOrderCreate(req, res) {
     const addressData = extractAddressComponents(shopifyOrder);
     const productsString = mapShopifyProducts(shopifyOrder.line_items);
     const totalPrice = calculateTotalPrice(shopifyOrder);
+    const isStopDesk = detectStopDesk(shopifyOrder);
+    const isFragile = detectFragile(shopifyOrder);
 
     console.log(`   • Tracking ID: ${trackingId}`);
     console.log(`   • Customer: ${addressData.name}`);
     console.log(`   • Total: ${totalPrice} DZD`);
-    console.log(`   • Stop Desk: ${addressData.isStopDesk ? 'YES ✅' : 'No'}`);
-    console.log(`   • Fragile: ${addressData.isFragile ? 'YES ✅' : 'No'}`);
+    console.log(`   • Stop Desk: ${isStopDesk ? 'YES ✅' : 'No'}`);
+    console.log(`   • Fragile: ${isFragile ? 'YES ✅' : 'No'}`);
 
     // =========================================================================
     // STEP 5: Create ErpOrder
@@ -380,8 +451,8 @@ async function handleShopifyOrderCreate(req, res) {
           quantity: 1 // Already combined in productsString
         }
       ],
-      isStopDesk: addressData.isStopDesk,
-      isFragile: addressData.isFragile,
+      isStopDesk: isStopDesk,
+      isFragile: isFragile,
       totalAmountDzd: totalPrice,
       status: 'unconfirmed', // Manual confirmation required before export
       // Store Shopify order reference for tracking
