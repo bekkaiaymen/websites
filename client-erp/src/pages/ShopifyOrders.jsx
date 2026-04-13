@@ -707,7 +707,15 @@ const ShopifyOrders = () => {
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded text-xs">
                                 🏠 توصيل للمنزل
                               </span>
-                            )}\n                          </p>
+                            )}
+                          </p>
+                          {/* Stop Desk Warning */}
+                          {order.isStopDesk && (
+                            <p className="text-yellow-500 text-xs font-bold flex items-center gap-1 bg-yellow-500/20 p-2 rounded mt-2 border border-yellow-500/30">
+                              <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                              ⚠️ توصيل للمكتب: تأكد من تعديل البلدية لأقرب مكتب عند الدعوة
+                            </p>
+                          )}
                         </div>
                       </td>
 

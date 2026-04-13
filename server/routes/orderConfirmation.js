@@ -257,6 +257,40 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
             commune = rawWilaya;
           }
 
+          // AUTO-FALLBACK FOR STOP DESK ORDERS:
+          // If it's a Stop Desk order, delivery companies strictly require a commune with an active office.
+          // If merchant forgot to edit it to a specific office commune, fallback to Wilaya Chef-lieu.
+          // This prevents Excel rejection since every Wilaya has a main office.
+          if (order.isStopDesk && commune) {
+            // Check if commune looks like a remote village (simple heuristic)
+            // For safety, if it's Stop Desk and not clearly a major city, use Wilaya name
+            const majorCities = ['الجزائر', 'وهران', 'قسنطينة', 'تيبيسو', 'تلمسان', 'سيدي بلعباس', 'المدية', 'البليدة'];
+            const isMajorCity = majorCities.some(city => commune.includes(city) || commune.includes(city.split(' ')[0]));
+            
+            if (!isMajorCity && commune.length < 20) {
+              // Likely a remote commune, fallback to Wilaya to ensure it goes to Chef-lieu office
+              console.log(`   ℹ Stop Desk fallback: "${commune}" appears remote, using Wilaya name "${rawWilaya}"`);
+              commune = rawWilaya;
+            }
+          }
+
+          // AUTO-FALLBACK FOR STOP DESK ORDERS:
+          // If it's a Stop Desk order, delivery companies strictly require a commune with an active office.
+          // If merchant forgot to edit it to a specific office commune, fallback to Wilaya Chef-lieu.
+          // This prevents Excel rejection since every Wilaya has a main office.
+          if (order.isStopDesk && commune) {
+            // Check if commune looks like a remote village (simple heuristic: relatively short names after watering down)
+            // For safety, if it's Stop Desk and not clearly a major city name, use Wilaya name
+            const majorCities = ['الجزائر', 'وهران', 'قسنطينة', 'تيبيسو', 'تلمسان', 'سيدي بلعباس', 'المدية', 'البليدة'];
+            const isMajorCity = majorCities.some(city => commune.includes(city) || commune.includes(city.split(' ')[0]));
+            
+            if (!isMajorCity && commune.length < 20) {
+              // Likely a remote commune, fallback to Wilaya to ensure it goes to Chef-lieu office
+              console.log(`   ℹ Stop Desk fallback: "${commune}" appears remote, using Wilaya name "${rawWilaya}"`);
+              commune = rawWilaya;
+            }
+          }
+
           // Match wilaya code rigorously USING communesMap
           let wilayaCode = '';
           const cleanCommune = commune?.trim() || '';
