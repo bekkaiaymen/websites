@@ -142,9 +142,9 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
 
     console.log('📦 Export request received:', { merchantId, orderIdsCount: orderIds?.length || 0 });
 
+    // Build query to export confirmed orders in any status (pending, shipping, etc)
     let query = {
-      isConfirmed: true,
-      status: 'pending'
+      isConfirmed: true
     };
 
     // If it's a specific merchant, filter by their ID. Otherwise, get all.
@@ -181,6 +181,9 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
 
     if (confirmedOrders.length === 0) {
       console.warn('⚠️  No confirmed orders found for export');
+      console.warn('   Checking all orders to debug...');
+      const allOrders = await ErpOrder.find({ isConfirmed: true }).limit(5);
+      console.warn('   Sample confirmed orders:', allOrders.map(o => ({ _id: o._id, status: o.status, isConfirmed: o.isConfirmed })));
       return res.status(400).json({ 
         error: 'No confirmed orders to export',
         message: 'لا توجد طلبات مؤكدة لتصديرها. يرجى تأكيد الطلبات أولاً.'
