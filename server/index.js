@@ -652,6 +652,55 @@ app.put('/api/admin/orders/:id/status', authenticateToken, async (req, res) => {
 app.put('/api/orders/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
+    const {
+      status,
+      deliveryCost,
+      customerName,
+      customerPhone,
+      wilaya,
+      commune,
+      address,
+      totalAmountDzd,
+      notes,
+      isFragile,
+      isStopDesk
+    } = req.body;
+
+    const updateData = {};
+    
+    // Update top-level fields
+    if (status !== undefined) updateData.status = status;
+    if (deliveryCost !== undefined) updateData.deliveryCost = deliveryCost;
+    if (totalAmountDzd !== undefined) updateData.totalAmountDzd = totalAmountDzd;
+    if (notes !== undefined) updateData.notes = notes;
+    if (isFragile !== undefined) updateData.isFragile = isFragile;
+    if (isStopDesk !== undefined) updateData.isStopDesk = isStopDesk;
+    
+    // Update nested customerData fields
+    if (customerName !== undefined) updateData['customerData.name'] = customerName;
+    if (customerPhone !== undefined) updateData['customerData.phone'] = customerPhone;
+    if (wilaya !== undefined) updateData['customerData.wilaya'] = wilaya;
+    if (commune !== undefined) updateData['customerData.commune'] = commune;
+    if (address !== undefined) updateData['customerData.address'] = address;
+
+    const order = await ErpOrder.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true }
+    );
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    res.json({ success: true, order });
+  } catch (error) {
+    console.error('Error updating order:', error);
+    res.status(500).json({ error: 'Failed to update order' });
+  }
+});
+  try {
+    const { id } = req.params;
     const { status, deliveryCost, customerName, customerPhone, wilaya, address, total, notes } = req.body;
 
     if (status && !['Pending', 'Confirmed', 'Delivered', 'Returned', 'Cancelled'].includes(status)) {

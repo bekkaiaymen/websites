@@ -49,6 +49,7 @@ const ShopifyOrders = () => {
     confirmed: 0,
     unconfirmed: 0
   });
+  const [editingOrder, setEditingOrder] = useState(null);
 
   // ========================================================================
   // Load Merchant Info and Orders on Mount
@@ -181,8 +182,76 @@ const ShopifyOrders = () => {
   };
 
   // ========================================================================
-  // Confirm Single Order
+  // Save Order Edit
   // ========================================================================
+  const saveOrderEdit = async () => {
+    if (!editingOrder) return;
+    
+    try {
+      const token = localStorage.getItem('merchantToken') || localStorage.getItem('adminToken');
+      const res = await fetch(buildApiUrl(`/api/orders/${editingOrder._id}`), {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          customerName: editingOrder.customerData?.name,
+          customerPhone: editingOrder.customerData?.phone,
+          wilaya: editingOrder.customerData?.wilaya,
+          commune: editingOrder.customerData?.commune,
+          address: editingOrder.customerData?.address,
+          totalAmountDzd: editingOrder.totalAmountDzd,
+          notes: editingOrder.notes,
+          isFragile: editingOrder.isFragile,
+          isStopDesk: editingOrder.isStopDesk
+        })
+      });
+
+      if (!res.ok) throw new Error('فشل التحديث');
+
+      const { order } = await res.json();
+      setOrders(orders.map(o => o._id === order._id ? order : o));
+      applyFilters(
+        orders.map(o => o._id === order._id ? order : o),
+        filterStatus,
+        searchTerm
+      );
+      setEditingOrder(null);
+      alert('✅ تم تحديث الطلبية بنجاح!');
+    } catch (err) {
+      console.error('Save error:', err);
+      alert('خطأ: ' + err.message);
+    }
+  };
+
+  // ========================================================================
+  // Handle Edit Field Change
+  // ========================================================================
+  const handleEditChange = (field, value, isNested = false) => {
+    if (isNested) {
+      setEditingOrder({
+        ...editingOrder,
+        customerData: {
+          ...editingOrder.customerData,
+          [field]: value
+        }
+      });
+    } else {
+      setEditingOrder({
+        ...editingOrder,
+        [field]: value
+      });
+    }
+  };
+
+  // Handle checkbox toggle for fragile and stop desk
+  const handleCheckboxChange = (field) => {
+    setEditingOrder({
+      ...editingOrder,
+      [field]: !editingOrder[field]
+    });
+  };
   const confirmOrder = async (orderId) => {
     try {
       const token = localStorage.getItem('merchantToken') || localStorage.getItem('adminToken');
@@ -575,7 +644,13 @@ const ShopifyOrders = () => {
                       </td>
 
                       {/* Actions */}
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 flex gap-2 flex-wrap">
+                        <button
+                          onClick={() => setEditingOrder(order)}
+                          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
+                        >
+                          ✏️ تفاصيل وتعديل
+                        </button>
                         {!order.isConfirmed && (
                           <button
                             onClick={() => confirmOrder(order._id)}
@@ -604,6 +679,130 @@ const ShopifyOrders = () => {
           </ul>
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {editingOrder && (
+        <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1a1410] border border-brand-gold/30 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-4">
+            <h2 className="text-xl font-bold text-white mb-6">📝 تعديل تفاصيل الطلبية</h2>
+
+            {/* Name */}
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">اسم العميل</label>
+              <input
+                type="text"
+                value={editingOrder.customerData?.name || ''}
+                onChange={(e) => handleEditChange('name', e.target.value, true)}
+                className="w-full px-3 py-2 bg-[#2a1f15] border border-brand-gold/30 rounded text-white focus:outline-none focus:border-brand-gold"
+              />
+            </div>
+
+            {/* Phone */}
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">الهاتف</label>
+              <input
+                type="text"
+                value={editingOrder.customerData?.phone || ''}
+                onChange={(e) => handleEditChange('phone', e.target.value, true)}
+                className="w-full px-3 py-2 bg-[#2a1f15] border border-brand-gold/30 rounded text-white focus:outline-none focus:border-brand-gold"
+              />
+            </div>
+
+            {/* Wilaya */}
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">الولاية</label>
+              <input
+                type="text"
+                value={editingOrder.customerData?.wilaya || ''}
+                onChange={(e) => handleEditChange('wilaya', e.target.value, true)}
+                className="w-full px-3 py-2 bg-[#2a1f15] border border-brand-gold/30 rounded text-white focus:outline-none focus:border-brand-gold"
+              />
+            </div>
+
+            {/* Commune */}
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">البلدية</label>
+              <input
+                type="text"
+                value={editingOrder.customerData?.commune || ''}
+                onChange={(e) => handleEditChange('commune', e.target.value, true)}
+                className="w-full px-3 py-2 bg-[#2a1f15] border border-brand-gold/30 rounded text-white focus:outline-none focus:border-brand-gold"
+              />
+            </div>
+
+            {/* Address */}
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">العنوان</label>
+              <textarea
+                value={editingOrder.customerData?.address || ''}
+                onChange={(e) => handleEditChange('address', e.target.value, true)}
+                rows="2"
+                className="w-full px-3 py-2 bg-[#2a1f15] border border-brand-gold/30 rounded text-white focus:outline-none focus:border-brand-gold resize-none"
+              />
+            </div>
+
+            {/* Amount */}
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">المبلغ (د.ج)</label>
+              <input
+                type="number"
+                value={editingOrder.totalAmountDzd || 0}
+                onChange={(e) => handleEditChange('totalAmountDzd', Number(e.target.value))}
+                className="w-full px-3 py-2 bg-[#2a1f15] border border-brand-gold/30 rounded text-white focus:outline-none focus:border-brand-gold"
+              />
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">الملاحظات</label>
+              <textarea
+                value={editingOrder.notes || ''}
+                onChange={(e) => handleEditChange('notes', e.target.value)}
+                rows="2"
+                className="w-full px-3 py-2 bg-[#2a1f15] border border-brand-gold/30 rounded text-white focus:outline-none focus:border-brand-gold resize-none"
+              />
+            </div>
+
+            {/* Checkboxes */}
+            <div className="grid grid-cols-2 gap-4 py-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editingOrder.isFragile || false}
+                  onChange={() => handleCheckboxChange('isFragile')}
+                  className="w-4 h-4"
+                />
+                <span className="text-gray-300">🚨 قابل للكسر</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editingOrder.isStopDesk || false}
+                  onChange={() => handleCheckboxChange('isStopDesk')}
+                  className="w-4 h-4"
+                />
+                <span className="text-gray-300">📦 توصيل للمكتب (Stop Desk)</span>
+              </label>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3 justify-end pt-4 border-t border-brand-gold/30">
+              <button
+                onClick={() => setEditingOrder(null)}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded transition-colors"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={saveOrderEdit}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
+              >
+                ✅ حفظ التغييرات
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

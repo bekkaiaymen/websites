@@ -251,25 +251,31 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
               wilayaCode = Number(wilayaCode);
           }
 
+          // Fix wilaya name: convert numeric codes to names
+          let finalWilayaName = rawWilaya;
+          if (!isNaN(Number(rawWilaya)) && rawWilaya.trim() !== '') {
+            finalWilayaName = getWilayaName(Number(rawWilaya)) || rawWilaya;
+          }
+
           // Fill Excel Row
           worksheet.addRow({
-            trackingId: order.trackingId || '',
+            trackingId: '',
             customerName: customerName,
             phone1: phone,
             phone2: order.customerData?.phone2 || '',
             wilayaCode: wilayaCode || '',
-            wilayaName: rawWilaya,
+            wilayaName: finalWilayaName,
             commune: commune,
             address: addressStr,
             productName: productName,
             weight: order.weight || 1,
             totalAmount: amount,
-            notes: order.notes || (order.trackingId ? `Order: ${order.trackingId}` : ''),
-            fragile: '',
+            notes: order.notes || '',
+            fragile: order.isFragile ? 'OUI' : '',
             exchange: '',
             pickup: '',
             recovery: '',
-            stopDesk: '',
+            stopDesk: order.isStopDesk ? 'OUI' : '',
             mapLink: ''
           });
 

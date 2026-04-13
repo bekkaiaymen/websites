@@ -56,6 +56,16 @@ const erpOrderSchema = new mongoose.Schema({
     type: String
   },
   
+  // --------------- الخيارات الخاصة (Special Options) ---------------
+  isFragile: { // هل الطلبية قابلة للكسر
+    type: Boolean,
+    default: false
+  },
+  isStopDesk: { // هل التوصيل للمكتب فقط (Stop Desk)
+    type: Boolean,
+    default: false
+  },
+  
   // --------------- المالية وحقك في المتابعة والتسعيرات ---------------
   financials: {
     // 1. حسابات متابعتك
