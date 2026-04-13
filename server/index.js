@@ -81,11 +81,22 @@ app.get('/', (req, res) => {
 app.get('/api/orders', async (req, res) => {
   try {
     const orders = await Order.find().sort({ createdAt: -1 });
-    res.json(orders);
+    if (!res.headersSent) {
+      res.json(orders);
+    }
   } catch (error) {
-    console.error('Error fetching orders:', error);
-    res.status(500).json({ error: 'Server error fetching orders' });
+    console.error('❌ Error fetching orders:', error.name, error.message);
+    if (error.name === 'CastError') {
+      console.error('   CastError detected - likely bad data in database');
+    }
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        error: 'Server error fetching orders',
+        detail: error.message 
+      });
+    }
   }
+});
 });
 
 // POST /api/orders - Create a new order
@@ -532,10 +543,20 @@ app.delete('/api/admin/debug/clear', async (req, res) => {
 app.get('/api/admin/orders', authenticateToken, async (req, res) => {
   try {
     const orders = await Order.find().sort({ createdAt: -1 });
-    res.json(orders);
+    if (!res.headersSent) {
+      res.json(orders);
+    }
   } catch (error) {
-    console.error('Error fetching orders:', error);
-    res.status(500).json({ error: 'Server error fetching orders' });
+    console.error('❌ Error fetching admin orders:', error.name, error.message);
+    if (error.name === 'CastError') {
+      console.error('   CastError detected - likely bad data in database');
+    }
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        error: 'Server error fetching orders',
+        detail: error.message 
+      });
+    }
   }
 });
 
