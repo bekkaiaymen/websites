@@ -14,7 +14,7 @@ const Merchant = require('../models/Merchant');
  * Business Logic:
  * - Maps Shopify order data to ErpOrder schema
  * - Applies fulfillment fee as system expense
- * - Sets order status to 'pending' for Ecotrack export
+ * - Sets order status to 'unconfirmed' for manual admin confirmation before export
  */
 
 /**
@@ -357,7 +357,7 @@ async function handleShopifyOrderCreate(req, res) {
         }
       ],
       totalAmountDzd: totalPrice,
-      status: 'pending', // Ready for Ecotrack export
+      status: 'unconfirmed', // Manual confirmation required before export
       // Store Shopify order reference for tracking
       shopifyOrderId: shopifyOrder.id,
       shopifyOrderNumber: shopifyOrder.order_number

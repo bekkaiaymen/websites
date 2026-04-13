@@ -10,6 +10,8 @@ const AdminOrders = () => {
   const [error, setError] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
+  const [fragileKeywords, setFragileKeywords] = useState([]);
+  const [newKeyword, setNewKeyword] = useState('');
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -41,7 +43,65 @@ const AdminOrders = () => {
 
   useEffect(() => {
     fetchOrders();
+    fetchFragileKeywords();
   }, []);
+
+  const fetchFragileKeywords = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch(buildApiUrl('/api/admin/fragile-keywords'), {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setFragileKeywords(data.fragileKeywords || []);
+      }
+    } catch (err) {
+      console.error('Error fetching fragile keywords:', err);
+    }
+  };
+
+  const handleAddKeyword = async () => {
+    if (!newKeyword.trim()) return;
+    try {
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch(buildApiUrl('/api/admin/fragile-keywords'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ keyword: newKeyword, action: 'add' })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setFragileKeywords(data.fragileKeywords || []);
+        setNewKeyword('');
+      }
+    } catch (err) {
+      console.error('Error adding keyword:', err);
+    }
+  };
+
+  const handleRemoveKeyword = async (keyword) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch(buildApiUrl('/api/admin/fragile-keywords'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ keyword, action: 'remove' })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setFragileKeywords(data.fragileKeywords || []);
+      }
+    } catch (err) {
+      console.error('Error removing keyword:', err);
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -252,6 +312,44 @@ const AdminOrders = () => {
               {error}
             </div>
           )}
+
+          {/* Fragile Settings UI */}
+          <div className="bg-[#2a1810] border border-yellow-600/30 rounded-lg p-6">
+            <h3 className="text-xl font-bold text-yellow-600 mb-4">⚙️ إعدادات المنتجات القابلة للكسر (Fragile Products)</h3>
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="ادخل كلمة مفتاحية للمنتجات القابلة للكسر..."
+                  value={newKeyword}
+                  onChange={(e) => setNewKeyword(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddKeyword()}
+                  className="flex-1 bg-[#0f0a08] border border-yellow-600/30 rounded-lg p-2 text-brand-cream placeholder-gray-500"
+                />
+                <button
+                  onClick={handleAddKeyword}
+                  className="px-4 py-2 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-600 rounded-lg transition font-bold"
+                >
+                  إضافة
+                </button>
+              </div>
+              {fragileKeywords.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {fragileKeywords.map((keyword) => (
+                    <div key={keyword} className="bg-yellow-600/20 border border-yellow-600/50 rounded-full px-3 py-1 flex items-center gap-2 text-yellow-600 text-sm">
+                      <span>{keyword}</span>
+                      <button
+                        onClick={() => handleRemoveKeyword(keyword)}
+                        className="text-yellow-600 hover:text-yellow-400 font-bold ml-1"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
 
           <div className="bg-[#1a120f] border border-brand-gold/20 rounded-lg p-6">
         <div className="flex justify-between items-center mb-6">

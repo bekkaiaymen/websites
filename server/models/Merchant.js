@@ -43,6 +43,10 @@ const merchantSchema = new mongoose.Schema({
     type: String,
     enum: ['active', 'inactive'],
     default: 'active'
+  },
+  fragileKeywords: {
+    type: [String],
+    default: []
   }
 }, { timestamps: true });
 

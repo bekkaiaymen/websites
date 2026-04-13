@@ -559,6 +559,68 @@ app.get('/api/admin/orders', authenticateToken, async (req, res) => {
   }
 });
 
+// GET /api/admin/fragile-keywords - Fetch fragile keywords for logged-in merchant
+app.get('/api/admin/fragile-keywords', authenticateToken, async (req, res) => {
+  try {
+    const Merchant = require('./models/Merchant');
+    const merchantId = req.user.merchantId;
+    
+    if (!merchantId) {
+      return res.status(400).json({ error: 'Merchant ID not found in token' });
+    }
+    
+    const merchant = await Merchant.findById(merchantId).select('fragileKeywords');
+    if (!merchant) {
+      return res.status(404).json({ error: 'Merchant not found' });
+    }
+    
+    res.json({ fragileKeywords: merchant.fragileKeywords || [] });
+  } catch (error) {
+    console.error('❌ Error fetching fragile keywords:', error.message);
+    res.status(500).json({ error: 'Failed to fetch fragile keywords' });
+  }
+});
+
+// POST /api/admin/fragile-keywords - Add or remove fragile keyword
+app.post('/api/admin/fragile-keywords', authenticateToken, async (req, res) => {
+  try {
+    const Merchant = require('./models/Merchant');
+    const { keyword, action } = req.body;
+    const merchantId = req.user.merchantId;
+    
+    if (!keyword || !action || !['add', 'remove'].includes(action)) {
+      return res.status(400).json({ error: 'Invalid keyword or action' });
+    }
+    
+    if (!merchantId) {
+      return res.status(400).json({ error: 'Merchant ID not found in token' });
+    }
+    
+    const merchant = await Merchant.findById(merchantId);
+    if (!merchant) {
+      return res.status(404).json({ error: 'Merchant not found' });
+    }
+    
+    if (!merchant.fragileKeywords) {
+      merchant.fragileKeywords = [];
+    }
+    
+    if (action === 'add') {
+      if (!merchant.fragileKeywords.includes(keyword)) {
+        merchant.fragileKeywords.push(keyword);
+      }
+    } else if (action === 'remove') {
+      merchant.fragileKeywords = merchant.fragileKeywords.filter(k => k !== keyword);
+    }
+    
+    await merchant.save();
+    res.json({ fragileKeywords: merchant.fragileKeywords, message: `Keyword "${keyword}" ${action}ed successfully` });
+  } catch (error) {
+    console.error('❌ Error updating fragile keywords:', error.message);
+    res.status(500).json({ error: 'Failed to update fragile keywords' });
+  }
+});
+
 // PUT /api/admin/orders/:id/status - Update order status
 app.put('/api/admin/orders/:id/status', authenticateToken, async (req, res) => {
   try {

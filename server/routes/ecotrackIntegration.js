@@ -23,11 +23,12 @@ router.get('/export', async (req, res) => {
   try {
     console.log('📤 Starting Ecotrack export...');
 
-    // Fetch all PENDING orders with merchant info
+    // Fetch confirmed orders with merchant info (including fragileKeywords)
+    // Looking for 'confirmed' orders that have been manually approved by admin
     const orders = await ErpOrder.find({
-      status: 'pending'
+      status: { $in: ['pending', 'confirmed'] }
     })
-      .populate('merchantId', 'name email')
+      .populate('merchantId', 'name email fragileKeywords')
       .sort({ createdAt: -1 });
 
     console.log(`📦 Found ${orders.length} pending orders`);
@@ -80,6 +81,18 @@ router.get('/export', async (req, res) => {
           productName = order.products.map(p => `${p.name} (x${p.quantity || 1})`).join(', ');
         } else if (order.productName) {
           productName = order.productName;
+        }
+
+        // Check if product is fragile based on merchant keywords
+        let isFragile = '';
+        if (order.merchantId?.fragileKeywords && Array.isArray(order.merchantId.fragileKeywords)) {
+          for (const keyword of order.merchantId.fragileKeywords) {
+            if (productName.toLowerCase().includes(keyword.toLowerCase())) {
+              isFragile = 'OUI';
+              console.log(`   ℹ Product marked FRAGILE: "${productName}" contains "${keyword}"`);
+              break;
+            }
+          }
         }
 
         // Calculate total amount INCLUDING delivery fees
@@ -153,14 +166,14 @@ router.get('/export', async (req, res) => {
           phone1: rawPhone,
           phone2: order.customerData?.phone2 || '',
           wilayaCode: wilayaCode || '',
-          wilayaName: rawWilaya,
+          wilayaName: getWilayaName(wilayaCode) || rawWilaya,
           commune: commune,
           address: addressStr,
           productName: productName,
           weight: order.weight || 1,
           totalAmount: amount,
-          notes: order.notes || (order.trackingId ? `Order: ${order.trackingId}` : ''),
-          fragile: '',
+          notes: order.notes || '',
+          fragile: isFragile,
           exchange: '',
           pickup: '',
           recovery: '',
@@ -173,7 +186,7 @@ router.get('/export', async (req, res) => {
         rowsAdded++;
         
         // Log success
-        console.log(`✅ Row ${rowsAdded} added: ${customerName} (${wilayaCode})`);
+        console.log(`✅ Row ${rowsAdded} added: ${customerName} (${wilayaCode}) ${isFragile ? '🚨 FRAGILE' : ''}`;
 
       } catch (err) {
         console.error(`❌ Error processing order ${order._id}:`, err.message);
