@@ -11,6 +11,7 @@ const Admin = require('./models/Admin');
 const Expense = require('./models/Expense');
 const Hint = require('./models/Hint');
 const Settings = require('./models/Settings');
+const ErpOrder = require('./models/ErpOrder');
 const shopifyWebhooksRouter = require('./routes/shopifyWebhooks');
 const manualOrdersRouter = require('./routes/manualOrders');
 const expenseRouter = require('./routes/expense');
@@ -666,6 +667,11 @@ app.put('/api/orders/:id', authenticateToken, async (req, res) => {
       isStopDesk
     } = req.body;
 
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid order ID format' });
+    }
+
     // Build update object with proper nested structure
     const updateData = {};
     
@@ -707,6 +713,8 @@ app.put('/api/orders/:id', authenticateToken, async (req, res) => {
       updateData.customerData = customerDataUpdates;
     }
 
+    console.log(`📝 Updating order ${id} with data:`, JSON.stringify(updateData, null, 2));
+
     const order = await ErpOrder.findByIdAndUpdate(
       id,
       { $set: updateData },
@@ -714,13 +722,16 @@ app.put('/api/orders/:id', authenticateToken, async (req, res) => {
     );
 
     if (!order) {
+      console.error(`❌ Order not found: ${id}`);
       return res.status(404).json({ error: 'Order not found' });
     }
 
+    console.log(`✅ Order updated successfully: ${id}`);
     res.json({ success: true, order });
   } catch (error) {
-    console.error('Error updating order:', error);
-    res.status(500).json({ error: 'Failed to update order' });
+    console.error(`❌ Error updating order ${id}:`, error.message);
+    console.error('   Stack:', error.stack);
+    res.status(500).json({ error: 'Failed to update order', detail: error.message });
   }
 });
 
