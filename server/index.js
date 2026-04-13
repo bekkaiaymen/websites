@@ -97,7 +97,6 @@ app.get('/api/orders', async (req, res) => {
     }
   }
 });
-});
 
 // POST /api/orders - Create a new order
 app.post('/api/orders', async (req, res) => {
