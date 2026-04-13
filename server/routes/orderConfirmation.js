@@ -141,16 +141,18 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
   try {
     const { merchantId, orderIds } = req.body;
 
-    if (!merchantId || !mongoose.Types.ObjectId.isValid(merchantId)) {
-      return res.status(400).json({ error: 'Invalid merchantId' });
-    }
-
-    // Fetch confirmed orders (only those in the list if provided, or all confirmed)
     let query = {
-      merchantId: new mongoose.Types.ObjectId(merchantId),
       isConfirmed: true,
       status: 'pending'
     };
+
+    // If it's a specific merchant, filter by their ID. Otherwise, get all.
+    if (merchantId && merchantId !== 'all') {
+      if (!mongoose.Types.ObjectId.isValid(merchantId)) {
+        return res.status(400).json({ error: 'Invalid merchantId' });
+      }
+      query.merchantId = new mongoose.Types.ObjectId(merchantId);
+    }
 
     if (orderIds && Array.isArray(orderIds) && orderIds.length > 0) {
       query._id = { $in: orderIds.map(id => new mongoose.Types.ObjectId(id)) };

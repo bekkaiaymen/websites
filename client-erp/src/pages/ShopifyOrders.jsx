@@ -228,8 +228,12 @@ const ShopifyOrders = () => {
   // ========================================================================
   const exportToExcel = async () => {
     try {
-      if (!currentMerchant?._id) {
-        alert('خطأ: لم يتم تحديد التاجر');
+      const adminUser = JSON.parse(localStorage.getItem('adminUser') || 'null');
+      const isMerchant = !!currentMerchant?._id;
+      const isAdmin = !!(adminUser?.id || adminUser?._id);
+
+      if (!isMerchant && !isAdmin) {
+        alert('خطأ: لم يتم تحديد التاجر أو الإدارة');
         return;
       }
 
@@ -249,10 +253,11 @@ const ShopifyOrders = () => {
       const res = await fetch(buildApiUrl('/api/orders/export-excel'), {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          merchantId: currentMerchant._id,
+          merchantId: isMerchant ? currentMerchant._id : 'all',
           orderIds: orderIdsToExport
         })
       });
