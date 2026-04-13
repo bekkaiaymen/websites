@@ -27,29 +27,38 @@ const AdminOrderTracking = () => {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         }
       });
-      if (response.ok) {
-        const data = await response.json();
-        if (Array.isArray(data)) {
-          const safeData = data.map(order => {
-            try {
-              return {
-                ...order,
-                merchantName: order.merchant?.name || 'Unknown',
-                customerName: order.customerName || order.customerData?.name || 'غير محدد',
-                customerPhone: order.customerPhone || order.customerData?.phone || 'غير محدد'
-              };
-            } catch (e) {
-              return order;
-            }
-          });
-          setOrders(safeData);
-        } else {
-           setOrders([]);
-        }
+      
+      // Bulletproof error handling: check response status
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (Array.isArray(data)) {
+        const safeData = data.map(order => {
+          try {
+            return {
+              ...order,
+              merchantName: order.merchant?.name || 'Unknown',
+              customerName: order.customerName || order.customerData?.name || 'غير محدد',
+              customerPhone: order.customerPhone || order.customerData?.phone || 'غير محدد'
+            };
+          } catch (e) {
+            console.warn('Error transforming order:', e);
+            return order;
+          }
+        });
+        setOrders(safeData);
+      } else {
+        console.warn('Data is not an array:', data);
+        setOrders([]);
       }
     } catch (error) {
-      console.error('Error fetching orders:', error);
+      console.error('❌ Error fetching orders:', error);
+      setOrders([]);
     } finally {
+      // CRITICAL: Always stop loading spinner, even on error
       setLoading(false);
     }
   };

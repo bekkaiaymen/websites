@@ -50,6 +50,12 @@ const AdminOrders = () => {
       const res = await fetch(buildApiUrl('/api/orders'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      
+      // Bulletproof error handling: check response status
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+      
       const data = await res.json();
       
       let safeData = [];
@@ -63,16 +69,22 @@ const AdminOrders = () => {
               customerPhone: order.customerData?.phone || order.customerPhone || 'غير محدد'
             };
           } catch(e) {
+            console.warn('Error transforming order:', e);
             return order;
           }
         });
+      } else {
+        console.warn('Data is not an array:', data);
+        safeData = [];
       }
       setOrders(safeData);
       setError('');
     } catch (err) {
-      console.error('Error fetching orders:', err);
+      console.error('❌ Error fetching orders:', err);
+      setOrders([]);
       setError(err.message || 'فشل تحميل الطلبيات');
     } finally {
+      // CRITICAL: Always stop loading spinner, even on error
       setLoading(false);
     }
   };

@@ -9,13 +9,15 @@ const Merchant = require('../models/Merchant');
 const WalletTransaction = require('../models/WalletTransaction');
 const ErpExpense = require('../models/ErpExpense');
 const { getWilayaCode, getWilayaName } = require('../utils/wilayaMapping');
+const { communesMap } = require('../utils/communesMap');
 
 /**
  * GET /api/erp/ecotrack/export
  * 
  * Exports pending orders to Ecotrack format (.xlsx)
- * Maps Wilaya names to codes (1-58)
- * Returns Excel file matching Ecotrack template
+ * Uses EXACT 18-COLUMN Ecotrack/Yalidine format
+ * Maps communes to wilaya codes (1-58) using communesMap
+ * Includes delivery fees in montant du colis
  */
 router.get('/export', async (req, res) => {
   try {
@@ -30,55 +32,115 @@ router.get('/export', async (req, res) => {
 
     console.log(`📦 Found ${orders.length} pending orders`);
 
-    // Transform orders to Ecotrack format
-    const exportData = orders.map((order, index) => {
-      const wilayaCode = getWilayaCode(order.customerData.wilaya);
+    // Create workbook with ExcelJS for better formatting
+    const ExcelJS = require('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Ecotrack Export');
 
-      return {
-        'N°': index + 1,
-        'Reference Commande': order.trackingId || `ORD-${order._id}`,
-        'Nom et Prenom du Destinataire': order.customerData.name || '',
-        'Code Wilaya': wilayaCode || 0,
-        'Wilaya': order.customerData.wilaya || '',
-        'Commune de Livraison': order.customerData.address || '',
-        'Telephone Destinataire': order.customerData.phone || '',
-        'Montant': order.totalAmountDzd || 0,
-        'Frais de Livraison': order.financials.deliveryFee || 0,
-        'Statut': order.status,
-        'Merchant': order.merchantId?.name || 'N/A',
-        'Date Creation': new Date(order.createdAt).toLocaleDateString('fr-FR'),
-        'Produits': order.products?.map(p => `${p.name} (x${p.quantity})`).join(', ') || '',
-        'Notes': order.financials.followUpFeeApplied > 0 ? `Follow-up fee: ${order.financials.followUpFeeApplied} DZD` : ''
-      };
+    // Set up EXACT 18-column headers matching Ecotrack/Yalidine format
+    worksheet.columns = [
+      { header: 'reference commande', key: 'trackingId', width: 20 },
+      { header: 'nom et prenom du destinataire*', key: 'customerName', width: 25 },
+      { header: 'telephone*', key: 'phone1', width: 15 },
+      { header: 'telephone 2', key: 'phone2', width: 15 },
+      { header: 'code wilaya*', key: 'wilayaCode', width: 15 },
+      { header: 'wilaya de livraison', key: 'wilayaName', width: 20 },
+      { header: 'commune de livraison*', key: 'commune', width: 20 },
+      { header: 'adresse de livraison*', key: 'address', width: 30 },
+      { header: 'produit*', key: 'productName', width: 25 },
+      { header: 'poids (kg)', key: 'weight', width: 10 },
+      { header: 'montant du colis*', key: 'totalAmount', width: 15 },
+      { header: 'remarque', key: 'notes', width: 20 },
+      { header: 'FRAGILE\n( si oui mettez OUI sinon laissez vide )', key: 'fragile', width: 15 },
+      { header: 'ECHANGE\n( si oui mettez OUI sinon laissez vide )', key: 'exchange', width: 15 },
+      { header: 'PICK UP\n( si oui mettez OUI sinon laissez vide )', key: 'pickup', width: 15 },
+      { header: 'RECOUVREMENT\n( si oui mettez OUI sinon laissez vide )', key: 'recovery', width: 15 },
+      { header: 'STOP DESK\n( si oui mettez OUI sinon laissez vide )', key: 'stopDesk', width: 15 },
+      { header: 'Lien map', key: 'mapLink', width: 20 }
+    ];
+
+    // Style header row
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).alignment = { wrapText: true, vertical: 'middle', horizontal: 'center' };
+    worksheet.getRow(1).height = 40;
+
+    // Transform and add order data rows
+    orders.forEach((order, idx) => {
+      try {
+        const customerName = order.customerData?.name || order.customerName || 'Unknown';
+        const rawPhone = order.customerData?.phone || order.customerPhone || '';
+        const addressStr = order.customerData?.address || order.address || '';
+        
+        // Get product name
+        let productName = 'produit';
+        if (Array.isArray(order.products) && order.products.length > 0) {
+          productName = order.products.map(p => `${p.name} (x${p.quantity || 1})`).join(', ');
+        } else if (order.productName) {
+          productName = order.productName;
+        }
+
+        // Calculate total amount INCLUDING delivery fees
+        let amount = order.totalAmountDzd || order.totalPrice || order.amount || 0;
+        if (order.financials?.deliveryFee) {
+          amount += Number(order.financials.deliveryFee) || 0;
+        }
+
+        // Get wilaya info
+        let rawWilaya = order.customerData?.wilaya || order.wilayaName || '';
+        let commune = order.state || order.commune || order.customerData?.state || order.customerData?.commune || '';
+        
+        if (!commune && addressStr.includes(',')) {
+          commune = addressStr.split(',')[0].trim();
+        } else if (!commune) {
+          commune = rawWilaya;
+        }
+
+        // Map wilaya code using communesMap
+        let wilayaCode = '';
+        const cleanCommune = commune?.trim() || '';
+        const cleanWilaya = rawWilaya?.trim() || '';
+        
+        if (cleanCommune && communesMap[cleanCommune]) {
+          wilayaCode = communesMap[cleanCommune];
+        } else if (cleanWilaya && communesMap[cleanWilaya]) {
+          wilayaCode = communesMap[cleanWilaya];
+        } else {
+          wilayaCode = getWilayaCode(rawWilaya) || getWilayaCode(commune) || '';
+        }
+
+        // Ensure wilayaCode is numeric
+        if (wilayaCode && !isNaN(Number(wilayaCode))) {
+          wilayaCode = Number(wilayaCode);
+        }
+
+        // Add row to worksheet
+        worksheet.addRow({
+          trackingId: order.trackingId || `ORD-${order._id}`,
+          customerName: customerName,
+          phone1: rawPhone,
+          phone2: order.customerData?.phone2 || '',
+          wilayaCode: wilayaCode || '',
+          wilayaName: rawWilaya,
+          commune: commune,
+          address: addressStr,
+          productName: productName,
+          weight: order.weight || 1,
+          totalAmount: amount,
+          notes: order.notes || (order.trackingId ? `Order: ${order.trackingId}` : ''),
+          fragile: '',
+          exchange: '',
+          pickup: '',
+          recovery: '',
+          stopDesk: '',
+          mapLink: ''
+        });
+
+      } catch (err) {
+        console.error(`⚠️ Error processing order ${order._id}:`, err.message);
+      }
     });
 
-    console.log(`✅ Transformed ${exportData.length} orders`);
-
-    // Create workbook
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(exportData);
-
-    // Set column widths
-    const colWidths = [
-      { wch: 4 },   // N°
-      { wch: 20 },  // Reference Commande
-      { wch: 25 },  // Nom et Prenom
-      { wch: 12 },  // Code Wilaya
-      { wch: 20 },  // Wilaya
-      { wch: 25 },  // Commune
-      { wch: 15 },  // Telephone
-      { wch: 12 },  // Montant
-      { wch: 15 },  // Frais de Livraison
-      { wch: 12 },  // Statut
-      { wch: 20 },  // Merchant
-      { wch: 15 },  // Date Creation
-      { wch: 30 },  // Produits
-      { wch: 20 }   // Notes
-    ];
-    ws['!cols'] = colWidths;
-
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(wb, ws, 'Export Ecotrack');
+    console.log(`✅ Added ${orders.length} orders to worksheet`);
 
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().split('T')[0];
@@ -91,7 +153,7 @@ router.get('/export', async (req, res) => {
     }
 
     // Write file
-    XLSX.writeFile(wb, filepath);
+    await workbook.xlsx.writeFile(filepath);
     console.log(`📁 Export file created: ${filepath}`);
 
     // Send file
