@@ -186,7 +186,7 @@ router.get('/export', async (req, res) => {
         rowsAdded++;
         
         // Log success
-        console.log(`✅ Row ${rowsAdded} added: ${customerName} (${wilayaCode}) ${isFragile ? '🚨 FRAGILE' : ''}`;
+        console.log(`✅ Row ${rowsAdded} added: ${customerName} (${wilayaCode}) ${isFragile ? '🚨 FRAGILE' : ''}`);
 
       } catch (err) {
         console.error(`❌ Error processing order ${order._id}:`, err.message);
