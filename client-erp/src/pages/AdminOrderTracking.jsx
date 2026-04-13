@@ -169,29 +169,29 @@ const AdminOrderTracking = () => {
           <div className="text-center text-white">جاري التحميل...</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredOrders.map(order => (
+            {(filteredOrders || []).map(order => (
               <div
-                key={order._id}
+                key={order?._id}
                 onClick={() => setSelectedOrder(order)}
                 className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 cursor-pointer hover:border-brand-gold/50 transition"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <div className="text-xs text-slate-500">{order._id?.slice(-8)}</div>
-                    <div className="text-white font-bold">{order.customerName}</div>
+                    <div className="text-xs text-slate-500">{order?._id?.slice(-8)}</div>
+                    <div className="text-white font-bold">{order?.customerName || 'Unknown'}</div>
                   </div>
-                  <div className={`flex items-center gap-1 px-2 py-1 rounded border ${getStatusColor(order.status)}`}>
-                    {getStatusIcon(order.status)}
-                    <span className="text-xs">{getStatusLabel(order.status)}</span>
+                  <div className={`flex items-center gap-1 px-2 py-1 rounded border ${getStatusColor(order?.status)}`}>
+                    {getStatusIcon(order?.status)}
+                    <span className="text-xs">{getStatusLabel(order?.status)}</span>
                   </div>
                 </div>
 
                 <div className="text-sm text-slate-400 mb-2">
-                  📅 {new Date(order.createdAt).toLocaleDateString('ar-DZ')}
+                  📅 {new Date(order?.createdAt || new Date()).toLocaleDateString('ar-DZ')}
                 </div>
 
                 <div className="text-sm text-brand-gold font-bold">
-                  {order.totalAmount} دج
+                  {order?.totalAmount || 0} دج
                 </div>
               </div>
             ))}
@@ -216,24 +216,24 @@ const AdminOrderTracking = () => {
               <div className="bg-slate-800/50 border border-slate-700 rounded p-4 mb-4">
                 <h3 className="text-white font-bold mb-2">👤 معلومات الزبون</h3>
                 <div className="grid grid-cols-2 gap-2 text-sm text-slate-300">
-                  <div>الاسم: {selectedOrder.customerName}</div>
-                  <div>الهاتف: {selectedOrder.customerPhone}</div>
-                  <div>الولاية: {selectedOrder.wilaya}</div>
-                  <div>البلدية: {selectedOrder.commune}</div>
+                  <div>الاسم: {selectedOrder?.customerName || 'Unknown'}</div>
+                  <div>الهاتف: {selectedOrder?.customerPhone || 'N/A'}</div>
+                  <div>الولاية: {selectedOrder?.wilaya || 'N/A'}</div>
+                  <div>البلدية: {selectedOrder?.commune || 'N/A'}</div>
                 </div>
                 <div className="mt-2 text-slate-300 text-sm">
-                  📍 العنوان: {selectedOrder.address}
+                  📍 العنوان: {selectedOrder?.address || 'N/A'}
                 </div>
               </div>
 
               {/* المنتجات */}
               <div className="bg-slate-800/50 border border-slate-700 rounded p-4 mb-4">
                 <h3 className="text-white font-bold mb-2">📦 المنتجات</h3>
-                {selectedOrder.items?.map((item, idx) => (
+                {(selectedOrder?.items || []).map((item, idx) => (
                   <div key={idx} className="border-b border-slate-700 pb-2 mb-2 text-sm text-slate-300">
                     <div className="flex justify-between">
-                      <span>{item.name || item.productName}</span>
-                      <span>{item.quantity} × {item.price} دج</span>
+                      <span>{item?.name || item?.productName || 'N/A'}</span>
+                      <span>{item?.quantity || 0} × {item?.price || 0} دج</span>
                     </div>
                   </div>
                 ))}
@@ -243,7 +243,7 @@ const AdminOrderTracking = () => {
               <div className="bg-slate-800/50 border border-slate-700 rounded p-4 mb-4">
                 <div className="flex justify-between text-white font-bold mb-2">
                   <span>الإجمالي:</span>
-                  <span className="text-brand-gold">{selectedOrder.totalAmount} دج</span>
+                  <span className="text-brand-gold">{selectedOrder?.totalAmount || 0} دج</span>
                 </div>
               </div>
 
@@ -254,9 +254,9 @@ const AdminOrderTracking = () => {
                   {['pending', 'processing', 'shipped', 'fulfilled', 'cancelled'].map(status => (
                     <button
                       key={status}
-                      onClick={() => updateOrderStatus(selectedOrder._id, status)}
+                      onClick={() => updateOrderStatus(selectedOrder?._id, status)}
                       className={`px-3 py-2 rounded text-sm font-bold transition ${
-                        selectedOrder.status === status
+                        selectedOrder?.status === status
                           ? 'bg-brand-gold text-brand-dark'
                           : 'bg-slate-700 hover:bg-slate-600 text-white'
                       }`}
@@ -271,9 +271,9 @@ const AdminOrderTracking = () => {
               <div className="bg-slate-800/50 border border-slate-700 rounded p-4 mb-4">
                 <h3 className="text-white font-bold mb-2">✅ Fulfillment</h3>
                 <div className="space-y-2 text-sm text-slate-300">
-                  <div>رقم Tracking: {selectedOrder.trackingNumber || 'لم يتم تعيينه'}</div>
-                  <div>تاريخ التسليم المتوقع: {selectedOrder.estimatedDelivery ? new Date(selectedOrder.estimatedDelivery).toLocaleDateString('ar-DZ') : 'غير محدد'}</div>
-                  <div>الحالة الحالية: {getStatusLabel(selectedOrder.status)}</div>
+                  <div>رقم Tracking: {selectedOrder?.trackingNumber || 'لم يتم تعيينه'}</div>
+                  <div>تاريخ التسليم المتوقع: {selectedOrder?.estimatedDelivery ? new Date(selectedOrder?.estimatedDelivery).toLocaleDateString('ar-DZ') : 'غير محدد'}</div>
+                  <div>الحالة الحالية: {getStatusLabel(selectedOrder?.status)}</div>
                 </div>
               </div>
 

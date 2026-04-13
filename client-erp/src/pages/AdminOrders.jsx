@@ -284,12 +284,12 @@ const AdminOrders = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-brand-gold/10">
-                {orders.map((order) => (
+                {(orders || []).map((order) => (
                   <tr
-                    key={order._id}
+                    key={order?._id}
                     className="hover:bg-brand-gold/5 transition"
                   >
-                    {editingId === order._id ? (
+                    {editingId === order?._id ? (
                       <>
                         <td colSpan="6" className="p-4">
                           <div className="space-y-4">
@@ -459,32 +459,32 @@ const AdminOrders = () => {
                     ) : (
                       <>
                           <td className="p-3">
-                            <div className="text-brand-cream">{order.customerName || 'غير محدد'}</div>
-                            <div className="text-xs text-brand-gold">{order.productName || order.orderType}</div>
+                            <div className="text-brand-cream">{order?.customerName || 'غير محدد'}</div>
+                            <div className="text-xs text-brand-gold">{order?.productName || order?.orderType}</div>
                           </td>
-                          <td className="p-3 text-brand-cream">{order.customerPhone || 'غير محدد'}</td>
+                          <td className="p-3 text-brand-cream">{order?.customerPhone || 'غير محدد'}</td>
                             <td className="p-3 text-sm max-w-xs whitespace-normal breaks-words">
                               <div className="text-gray-300 mb-1">
-                                {order.wilaya ? `${order.wilaya} - ` : ''}{order.address || 'غير محدد'}
+                                {order?.wilaya ? `${order?.wilaya} - ` : ''}{order?.address || 'غير محدد'}
                               </div>
-                              {order.notes && (
+                              {order?.notes && (
                                 <div className="text-xs bg-yellow-500/20 text-yellow-300 p-2 rounded-md border border-yellow-500/30">
                                   <strong>📍 ملاحظات للتوصيل:</strong><br/>
-                                  {order.notes}
+                                  {order?.notes}
                                 </div>
                               )}
                           </td>
-                          <td className="p-3 text-brand-gold font-bold">{order.total || order.budget || 0} د.ج</td>
+                          <td className="p-3 text-brand-gold font-bold">{order?.total || order?.budget || 0} د.ج</td>
                         <td className="p-3 text-brand-gold">
-                          {order.deliveryCost || 0} دج
+                          {order?.deliveryCost || 0} دج
                         </td>
                         <td className="p-3">
                           <span
                             className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(
-                              order.status
+                              order?.status
                             )}`}
                           >
-                            {getStatusLabel(order.status)}
+                            {getStatusLabel(order?.status)}
                           </span>
                         </td>
                         <td className="p-3">
@@ -502,7 +502,7 @@ const AdminOrders = () => {
                                 <Send className="w-4 h-4 mr-1" />
                                 طلب توصيل
                               </button>
-                              <button                              onClick={() => deleteOrder(order._id)}
+                              <button                              onClick={() => deleteOrder(order?._id)}
                               className="px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded text-xs font-bold"
                             >
                               <Trash2 className="w-4 h-4 inline mr-1" />

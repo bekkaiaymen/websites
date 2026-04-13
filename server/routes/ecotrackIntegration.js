@@ -65,6 +65,9 @@ router.get('/export', async (req, res) => {
     worksheet.getRow(1).height = 40;
 
     // Transform and add order data rows
+    console.log(`📋 Starting to add ${orders.length} rows to worksheet...`);
+    let rowsAdded = 0;
+    
     orders.forEach((order, idx) => {
       try {
         const customerName = order.customerData?.name || order.customerName || 'Unknown';
@@ -113,8 +116,8 @@ router.get('/export', async (req, res) => {
           wilayaCode = Number(wilayaCode);
         }
 
-        // Add row to worksheet
-        worksheet.addRow({
+        // Build row object with EXACT keys matching worksheet.columns
+        const rowData = {
           trackingId: order.trackingId || `ORD-${order._id}`,
           customerName: customerName,
           phone1: rawPhone,
@@ -133,12 +136,30 @@ router.get('/export', async (req, res) => {
           recovery: '',
           stopDesk: '',
           mapLink: ''
-        });
+        };
+
+        // Add row to worksheet
+        const newRow = worksheet.addRow(rowData);
+        rowsAdded++;
+        
+        // Log success
+        console.log(`✅ Row ${rowsAdded} added: ${customerName} (${wilayaCode})`);
 
       } catch (err) {
-        console.error(`⚠️ Error processing order ${order._id}:`, err.message);
+        console.error(`❌ Error processing order ${order._id}:`, err.message);
+        console.error(`   Full error:`, err);
       }
     });
+
+    console.log(`✅ Successfully added ${rowsAdded} rows to worksheet (expected ${orders.length})`);
+    
+    if (rowsAdded === 0) {
+      console.warn('⚠️ NO ROWS WERE ADDED TO THE WORKSHEET! Checking for data...');
+      console.warn(`   Orders array length: ${orders.length}`);
+      if (orders.length > 0) {
+        console.warn(`   First order: ${JSON.stringify(orders[0], null, 2)}`.substring(0, 500));
+      }
+    }
 
     console.log(`✅ Added ${orders.length} orders to worksheet`);
 
