@@ -98,22 +98,51 @@ router.get('/export', async (req, res) => {
           commune = rawWilaya;
         }
 
-        // Map wilaya code using communesMap
+        // Map wilaya code using communesMap - BULLETPROOF
         let wilayaCode = '';
-        const cleanCommune = commune?.trim() || '';
-        const cleanWilaya = rawWilaya?.trim() || '';
-        
-        if (cleanCommune && communesMap[cleanCommune]) {
-          wilayaCode = communesMap[cleanCommune];
-        } else if (cleanWilaya && communesMap[cleanWilaya]) {
-          wilayaCode = communesMap[cleanWilaya];
-        } else {
-          wilayaCode = getWilayaCode(rawWilaya) || getWilayaCode(commune) || '';
-        }
+        try {
+          const cleanCommune = commune?.trim() || '';
+          const cleanWilaya = rawWilaya?.trim() || '';
+          
+          // Only access communesMap if keys exist and map exists
+          if (cleanCommune && typeof communesMap === 'object' && communesMap !== null && cleanCommune in communesMap) {
+            wilayaCode = communesMap[cleanCommune];
+            console.log(`   ✓ Mapped commune "${cleanCommune}" to code ${wilayaCode}`);
+          } else if (cleanWilaya && typeof communesMap === 'object' && communesMap !== null && cleanWilaya in communesMap) {
+            wilayaCode = communesMap[cleanWilaya];
+            console.log(`   ✓ Mapped wilaya "${cleanWilaya}" to code ${wilayaCode}`);
+          } else {
+            // Fallback to getWilayaCode with safety
+            try {
+              const fallbackCode = getWilayaCode(rawWilaya) || getWilayaCode(commune);
+              if (fallbackCode) {
+                wilayaCode = fallbackCode;
+                console.log(`   ✓ Used fallback getWilayaCode for "${rawWilaya || commune}" -> ${wilayaCode}`);
+              } else {
+                console.warn(`   ⚠ No wilaya mapping found for "${rawWilaya}" or "${commune}"`);
+                wilayaCode = '';
+              }
+            } catch (fallbackErr) {
+              console.warn(`   ⚠ getWilayaCode failed for "${rawWilaya}":`, fallbackErr.message);
+              wilayaCode = '';
+            }
+          }
 
-        // Ensure wilayaCode is numeric
-        if (wilayaCode && !isNaN(Number(wilayaCode))) {
-          wilayaCode = Number(wilayaCode);
+          // Ensure wilayaCode is numeric if it exists
+          if (wilayaCode) {
+            if (!isNaN(Number(wilayaCode))) {
+              wilayaCode = Number(wilayaCode);
+            } else {
+              console.warn(`   ⚠ wilayaCode is not numeric: "${wilayaCode}"`);
+              wilayaCode = ''; // Reset to empty if non-numeric
+            }
+          } else {
+            wilayaCode = '';
+          }
+
+        } catch (wilayaErr) {
+          console.error(`   ❌ Fatal error in wilaya mapping:`, wilayaErr.message);
+          wilayaCode = '';
         }
 
         // Build row object with EXACT keys matching worksheet.columns
