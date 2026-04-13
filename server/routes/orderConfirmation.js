@@ -40,8 +40,7 @@ router.get('/confirmed', authenticateToken, async (req, res) => {
     }
 
     const confirmedOrders = await ErpOrder.find(query)
-      .sort({ confirmedAt: -1 })
-      .populate('confirmedBy', 'name email');
+      .sort({ confirmedAt: -1 });
 
     res.json({
       success: true,
