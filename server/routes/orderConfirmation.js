@@ -249,86 +249,61 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
           const phone = formatPhoneNumber(rawPhone) || rawPhone;
 
           let rawWilaya = order.customerData?.wilaya || order.wilayaName || '';
-          let commune = order.state || order.commune || order.customerData?.state || order.customerData?.commune || '';
+          let rawCommune = order.customerData?.commune || order.state || order.commune || order.customerData?.state || '';
           
-          if (!commune && addressStr.includes(',')) {
-            commune = addressStr.split(',')[0].trim();
-          } else if (!commune) {
-            commune = rawWilaya;
+          let wilayaCode = '';
+          let wilayaNameStr = rawWilaya;
+          let communeStr = rawCommune;
+
+          // If Shopify sent Wilaya as a number (e.g., "14")
+          if (!isNaN(Number(rawWilaya)) && rawWilaya.trim() !== '') {
+            wilayaCode = Number(rawWilaya);
+          } else {
+            // Try to find the code from the string mapping
+            wilayaCode = getWilayaCode(rawWilaya) || getWilayaCode(rawCommune) || '';
+          }
+
+          // Clean up: If commune was accidentally captured as a number, clear it
+          if (!isNaN(Number(communeStr)) && communeStr.trim() !== '') {
+            communeStr = ''; 
+          }
+          
+          // Fallback: If address contains comma, try to extract commune
+          if (!communeStr && addressStr.includes(',')) {
+            communeStr = addressStr.split(',')[0].trim();
           }
 
           // AUTO-FALLBACK FOR STOP DESK ORDERS:
           // If it's a Stop Desk order, delivery companies strictly require a commune with an active office.
           // If merchant forgot to edit it to a specific office commune, fallback to Wilaya Chef-lieu.
           // This prevents Excel rejection since every Wilaya has a main office.
-          if (order.isStopDesk && commune) {
+          if (order.isStopDesk && communeStr) {
             // Check if commune looks like a remote village (simple heuristic)
             // For safety, if it's Stop Desk and not clearly a major city, use Wilaya name
             const majorCities = ['الجزائر', 'وهران', 'قسنطينة', 'تيبيسو', 'تلمسان', 'سيدي بلعباس', 'المدية', 'البليدة'];
-            const isMajorCity = majorCities.some(city => commune.includes(city) || commune.includes(city.split(' ')[0]));
+            const isMajorCity = majorCities.some(city => communeStr.includes(city) || communeStr.includes(city.split(' ')[0]));
             
-            if (!isMajorCity && commune.length < 20) {
+            if (!isMajorCity && communeStr.length < 20) {
               // Likely a remote commune, fallback to Wilaya to ensure it goes to Chef-lieu office
-              console.log(`   ℹ Stop Desk fallback: "${commune}" appears remote, using Wilaya name "${rawWilaya}"`);
-              commune = rawWilaya;
+              console.log(`   ℹ Stop Desk fallback: "${communeStr}" appears remote, using Wilaya name "${rawWilaya}"`);
+              communeStr = rawWilaya;
             }
-          }
-
-          // AUTO-FALLBACK FOR STOP DESK ORDERS:
-          // If it's a Stop Desk order, delivery companies strictly require a commune with an active office.
-          // If merchant forgot to edit it to a specific office commune, fallback to Wilaya Chef-lieu.
-          // This prevents Excel rejection since every Wilaya has a main office.
-          if (order.isStopDesk && commune) {
-            // Check if commune looks like a remote village (simple heuristic: relatively short names after watering down)
-            // For safety, if it's Stop Desk and not clearly a major city name, use Wilaya name
-            const majorCities = ['الجزائر', 'وهران', 'قسنطينة', 'تيبيسو', 'تلمسان', 'سيدي بلعباس', 'المدية', 'البليدة'];
-            const isMajorCity = majorCities.some(city => commune.includes(city) || commune.includes(city.split(' ')[0]));
-            
-            if (!isMajorCity && commune.length < 20) {
-              // Likely a remote commune, fallback to Wilaya to ensure it goes to Chef-lieu office
-              console.log(`   ℹ Stop Desk fallback: "${commune}" appears remote, using Wilaya name "${rawWilaya}"`);
-              commune = rawWilaya;
-            }
-          }
-
-          // Match wilaya code rigorously USING communesMap
-          let wilayaCode = '';
-          const cleanCommune = commune?.trim() || '';
-          const cleanWilaya = rawWilaya?.trim() || '';
-          
-          if (cleanCommune && communesMap[cleanCommune]) {
-              wilayaCode = communesMap[cleanCommune];
-          } else if (cleanWilaya && communesMap[cleanWilaya]) {
-              wilayaCode = communesMap[cleanWilaya];
-          } else {
-              wilayaCode = getWilayaCode(rawWilaya) || getWilayaCode(commune) || '';
-          }
-
-          // Fallback parsing for integer
-          if (wilayaCode && !isNaN(Number(wilayaCode))) {
-              wilayaCode = Number(wilayaCode);
-          }
-
-          // Fix wilaya name: convert numeric codes to names
-          let finalWilayaName = rawWilaya;
-          if (!isNaN(Number(rawWilaya)) && rawWilaya.trim() !== '') {
-            finalWilayaName = getWilayaName(Number(rawWilaya)) || rawWilaya;
           }
 
           // Fill Excel Row
           worksheet.addRow({
-            trackingId: '',
+            trackingId: order.trackingId || '',
             customerName: customerName,
             phone1: phone,
             phone2: order.customerData?.phone2 || '',
-            wilayaCode: wilayaCode || '',
-            wilayaName: finalWilayaName,
-            commune: commune,
+            wilayaCode: wilayaCode, // strictly the number
+            wilayaName: wilayaNameStr,
+            commune: communeStr, // strictly the string (e.g., FRENDA)
             address: addressStr,
             productName: productName,
             weight: order.weight || 1,
             totalAmount: amount,
-            notes: order.notes || '',
+            notes: order.notes || '', // strictly empty unless notes exist
             fragile: order.isFragile ? 'OUI' : '',
             exchange: '',
             pickup: '',

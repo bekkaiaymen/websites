@@ -371,8 +371,10 @@ const ShopifyOrders = () => {
   };
 
   const selectAllConfirmed = () => {
-    // Open selection modal instead of just selecting confirmed
-    setShowSelectionModal(true);
+    const confirmedIds = filteredOrders
+      .filter(o => o.isConfirmed)
+      .map(o => o._id);
+    setSelectedOrders(confirmedIds);
   };
 
   const selectAllOrders = () => {
@@ -450,6 +452,12 @@ const ShopifyOrders = () => {
   // ========================================================================
   // Render Empty State
   // ========================================================================
+  
+  // Calculate counts from orders array
+  const allCount = orders.length;
+  const confirmedCount = orders.filter(o => o.isConfirmed).length;
+  const unconfirmedCount = orders.filter(o => !o.isConfirmed).length;
+  
   if (loading) {
     return (
       <div className="min-h-screen bg-brand-dark">
@@ -556,7 +564,7 @@ const ShopifyOrders = () => {
                   : 'bg-[#1a120f] text-gray-400 hover:bg-[#2a1a0f]'
               }`}
             >
-              الكل ({filteredOrders.length})
+              الكل ({allCount})
             </button>
             <button
               onClick={() => handleFilterChange('confirmed')}
@@ -566,7 +574,7 @@ const ShopifyOrders = () => {
                   : 'bg-[#1a120f] text-gray-400 hover:bg-[#2a1a0f]'
               }`}
             >
-              مؤكدة ✅
+              مؤكدة ({confirmedCount}) ✅
             </button>
             <button
               onClick={() => handleFilterChange('unconfirmed')}
@@ -576,7 +584,7 @@ const ShopifyOrders = () => {
                   : 'bg-[#1a120f] text-gray-400 hover:bg-[#2a1a0f]'
               }`}
             >
-              بانتظار التأكيد ⏳
+              بانتظار التأكيد ({unconfirmedCount}) ⏳
             </button>
           </div>
 
@@ -602,7 +610,7 @@ const ShopifyOrders = () => {
             onClick={selectAllConfirmed}
             className="px-4 py-2 bg-[#1a120f] hover:bg-[#2a1a0f] text-gray-400 rounded-lg text-sm"
           >
-            تحديد المؤكدة
+            تحديد المؤكدة ✔️
           </button>
         </div>
 
