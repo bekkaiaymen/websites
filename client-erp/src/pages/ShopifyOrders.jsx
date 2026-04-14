@@ -311,15 +311,8 @@ const ShopifyOrders = () => {
       setExporting(true);
       const token = localStorage.getItem('merchantToken') || localStorage.getItem('adminToken');
 
-      // Send only selected confirmed orders, or all confirmed if none selected
-      const orderIdsToExport =
-        selectedOrders.filter(id =>
-          orders.find(o => o._id === id && o.isConfirmed)
-        ).length > 0
-          ? selectedOrders.filter(id =>
-            orders.find(o => o._id === id && o.isConfirmed)
-          )
-          : null;
+      // Send only selected orders (any status: confirmed or unconfirmed)
+      const orderIdsToExport = selectedOrders.length > 0 ? selectedOrders : null;
 
       const res = await fetch(buildApiUrl('/api/orders/export-excel'), {
         method: 'POST',
@@ -389,6 +382,26 @@ const ShopifyOrders = () => {
 
   const clearAllSelections = () => {
     setSelectedOrders([]);
+  };
+
+  // ========================================================================
+  // Delete Order
+  // ========================================================================
+  const deleteOrder = async (orderId) => {
+    if (!window.confirm('هل أنت متأكد أنك تريد حذف هذه الطلبية نهائياً؟')) return;
+    try {
+      const token = localStorage.getItem('merchantToken') || localStorage.getItem('adminToken');
+      const res = await fetch(buildApiUrl(`/api/orders/${orderId}`), {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('فشل حذف الطلبية');
+      setOrders(orders.filter(o => o._id !== orderId));
+      applyFilters(orders.filter(o => o._id !== orderId), filterStatus, searchTerm);
+      fetchStats(currentMerchant?._id || 'all');
+    } catch (err) {
+      alert('خطأ: ' + err.message);
+    }
   };
 
   // ========================================================================
@@ -591,7 +604,7 @@ const ShopifyOrders = () => {
           {/* Export Button */}
           <button
             onClick={exportToExcel}
-            disabled={exporting || filteredOrders.filter(o => o.isConfirmed).length === 0}
+            disabled={exporting || selectedOrders.length === 0}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 transition-all"
           >
             <FileDown className="w-4 h-4" />
@@ -605,7 +618,7 @@ const ShopifyOrders = () => {
             )}
           </button>
 
-          {/* Select All */}
+          {/* Select All Confirmed */}
           <button
             onClick={selectAllConfirmed}
             className="px-4 py-2 bg-[#1a120f] hover:bg-[#2a1a0f] text-gray-400 rounded-lg text-sm"
@@ -761,6 +774,14 @@ const ShopifyOrders = () => {
                           ✏️ تفاصيل وتعديل
                         </button>
                         
+                        {/* Delete Button */}
+                        <button
+                          onClick={() => deleteOrder(order._id)}
+                          className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition-colors"
+                        >
+                          🗑️ حذف
+                        </button>
+
                         {/* Toggle Confirmation Button */}
                         <button
                           onClick={() => toggleOrderConfirmation(order._id)}

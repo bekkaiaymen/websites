@@ -142,10 +142,8 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
 
     console.log('📦 Export request received:', { merchantId, orderIdsCount: orderIds?.length || 0 });
 
-    // Build query to export confirmed orders in any status (pending, shipping, etc)
-    let query = {
-      isConfirmed: true
-    };
+    // Build query to export any order (confirmed or unconfirmed) that is selected
+    let query = {};
 
     // If it's a specific merchant, filter by their ID. Otherwise, get all.
     if (merchantId && merchantId !== 'all') {
@@ -267,18 +265,14 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
             commune = getWilayaName(Number(commune)) || commune;
           }
 
-          // 3. Ultimate safe fallback ONLY if commune is completely empty
+          // 3. Safe fallback ONLY if commune is completely empty
           if (!commune && addressStr.includes(',')) {
             commune = addressStr.split(',')[0].trim();
-          } else if (!commune) {
-            commune = finalWilayaName;
           }
+          // Note: We do NOT override commune with wilaya. Trust the exact database value.
           
           // Note: We REMOVED the aggressive Stop Desk override. 
-          // The system now trusts the exact 'commune' string, allowing the merchant to manually edit it for Stop Desk.
-
-          // Fill Excel Row
-          worksheet.addRow({
+          // The system now trusts the exact 'commune' string, allowing the merchant to manually edit it for Stop Desk.orksheet.addRow({
             trackingId: '', // User requested this to be explicitly empty
             customerName: customerName,
             phone1: phone,
@@ -387,4 +381,16 @@ router.get('/stats', authenticateToken, async (req, res) => {
   }
 });
 
-module.exports = router;
+// ============================================================================
+// ROUTE 6: DELETE /api/orders/:orderId - Delete an order
+// ============================================================================
+router.delete('/:orderId', authenticateToken, async (req, res) => {
+  try {
+    const deletedOrder = await ErpOrder.findByIdAndDelete(req.params.orderId);
+    if (!deletedOrder) return res.status(404).json({ error: 'Order not found' });
+    res.json({ success: true, message: 'Order deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete order' });
+  }
+});
+
