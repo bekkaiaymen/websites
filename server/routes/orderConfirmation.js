@@ -270,9 +270,9 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
             commune = addressStr.split(',')[0].trim();
           }
           // Note: We do NOT override commune with wilaya. Trust the exact database value.
-          
-          // Note: We REMOVED the aggressive Stop Desk override. 
-          // The system now trusts the exact 'commune' string, allowing the merchant to manually edit it for Stop Desk.orksheet.addRow({
+
+          // Fill Excel Row
+          worksheet.addRow({
             trackingId: '', // User requested this to be explicitly empty
             customerName: customerName,
             phone1: phone,
