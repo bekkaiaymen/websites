@@ -251,34 +251,31 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
           let rawWilaya = order.customerData?.wilaya || order.wilayaName || '';
           let commune = order.customerData?.commune || order.state || order.commune || order.customerData?.state || '';
           
-          if (!commune && addressStr.includes(',')) {
-            commune = addressStr.split(',')[0].trim();
-          } else if (!commune) {
-            commune = rawWilaya;
-          }
-
-          let wilayaCode = getWilayaCode(rawWilaya) || getWilayaCode(commune) || '';
+          let wilayaCode = '';
           let finalWilayaName = rawWilaya;
 
-          // If Shopify sent Wilaya as a number (e.g., "14")
+          // 1. Process Wilaya (Convert number to string if needed)
           if (!isNaN(Number(rawWilaya)) && rawWilaya.trim() !== '') {
             wilayaCode = Number(rawWilaya);
-            finalWilayaName = getWilayaName(wilayaCode) || rawWilaya; // Convert 14 to Tiaret
+            finalWilayaName = getWilayaName(wilayaCode) || rawWilaya; // Convert "14" to "Tiaret"
+          } else {
+            wilayaCode = getWilayaCode(rawWilaya) || getWilayaCode(commune) || '';
           }
 
-          // If Shopify sent Commune as a number by mistake, convert it too
+          // 2. Process Commune (Convert number to string if Shopify sent a number by mistake)
           if (!isNaN(Number(commune)) && commune.trim() !== '') {
             commune = getWilayaName(Number(commune)) || commune;
           }
 
-          // Stop Desk Fallback
-          if (order.isStopDesk && commune) {
-            const majorCities = ['الجزائر', 'وهران', 'قسنطينة', 'تيبيسو', 'تلمسان', 'سيدي بلعباس', 'المدية', 'البليدة'];
-            const isMajorCity = majorCities.some(city => commune.includes(city) || commune.includes(city.split(' ')[0]));
-            if (!isMajorCity && commune.length < 20) {
-              commune = finalWilayaName;
-            }
+          // 3. Ultimate safe fallback ONLY if commune is completely empty
+          if (!commune && addressStr.includes(',')) {
+            commune = addressStr.split(',')[0].trim();
+          } else if (!commune) {
+            commune = finalWilayaName;
           }
+          
+          // Note: We REMOVED the aggressive Stop Desk override. 
+          // The system now trusts the exact 'commune' string, allowing the merchant to manually edit it for Stop Desk.
 
           // Fill Excel Row
           worksheet.addRow({
