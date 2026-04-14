@@ -249,61 +249,51 @@ router.post('/export-excel', authenticateToken, async (req, res) => {
           const phone = formatPhoneNumber(rawPhone) || rawPhone;
 
           let rawWilaya = order.customerData?.wilaya || order.wilayaName || '';
-          let rawCommune = order.customerData?.commune || order.state || order.commune || order.customerData?.state || '';
+          let commune = order.customerData?.commune || order.state || order.commune || order.customerData?.state || '';
           
-          let wilayaCode = '';
-          let wilayaNameStr = rawWilaya;
-          let communeStr = rawCommune;
+          if (!commune && addressStr.includes(',')) {
+            commune = addressStr.split(',')[0].trim();
+          } else if (!commune) {
+            commune = rawWilaya;
+          }
+
+          let wilayaCode = getWilayaCode(rawWilaya) || getWilayaCode(commune) || '';
+          let finalWilayaName = rawWilaya;
 
           // If Shopify sent Wilaya as a number (e.g., "14")
           if (!isNaN(Number(rawWilaya)) && rawWilaya.trim() !== '') {
             wilayaCode = Number(rawWilaya);
-          } else {
-            // Try to find the code from the string mapping
-            wilayaCode = getWilayaCode(rawWilaya) || getWilayaCode(rawCommune) || '';
+            finalWilayaName = getWilayaName(wilayaCode) || rawWilaya; // Convert 14 to Tiaret
           }
 
-          // Clean up: If commune was accidentally captured as a number, clear it
-          if (!isNaN(Number(communeStr)) && communeStr.trim() !== '') {
-            communeStr = ''; 
-          }
-          
-          // Fallback: If address contains comma, try to extract commune
-          if (!communeStr && addressStr.includes(',')) {
-            communeStr = addressStr.split(',')[0].trim();
+          // If Shopify sent Commune as a number by mistake, convert it too
+          if (!isNaN(Number(commune)) && commune.trim() !== '') {
+            commune = getWilayaName(Number(commune)) || commune;
           }
 
-          // AUTO-FALLBACK FOR STOP DESK ORDERS:
-          // If it's a Stop Desk order, delivery companies strictly require a commune with an active office.
-          // If merchant forgot to edit it to a specific office commune, fallback to Wilaya Chef-lieu.
-          // This prevents Excel rejection since every Wilaya has a main office.
-          if (order.isStopDesk && communeStr) {
-            // Check if commune looks like a remote village (simple heuristic)
-            // For safety, if it's Stop Desk and not clearly a major city, use Wilaya name
+          // Stop Desk Fallback
+          if (order.isStopDesk && commune) {
             const majorCities = ['الجزائر', 'وهران', 'قسنطينة', 'تيبيسو', 'تلمسان', 'سيدي بلعباس', 'المدية', 'البليدة'];
-            const isMajorCity = majorCities.some(city => communeStr.includes(city) || communeStr.includes(city.split(' ')[0]));
-            
-            if (!isMajorCity && communeStr.length < 20) {
-              // Likely a remote commune, fallback to Wilaya to ensure it goes to Chef-lieu office
-              console.log(`   ℹ Stop Desk fallback: "${communeStr}" appears remote, using Wilaya name "${rawWilaya}"`);
-              communeStr = rawWilaya;
+            const isMajorCity = majorCities.some(city => commune.includes(city) || commune.includes(city.split(' ')[0]));
+            if (!isMajorCity && commune.length < 20) {
+              commune = finalWilayaName;
             }
           }
 
           // Fill Excel Row
           worksheet.addRow({
-            trackingId: order.trackingId || '',
+            trackingId: '', // User requested this to be explicitly empty
             customerName: customerName,
             phone1: phone,
             phone2: order.customerData?.phone2 || '',
-            wilayaCode: wilayaCode, // strictly the number
-            wilayaName: wilayaNameStr,
-            commune: communeStr, // strictly the string (e.g., FRENDA)
+            wilayaCode: wilayaCode || '',
+            wilayaName: finalWilayaName,
+            commune: commune, // Fixed commune string
             address: addressStr,
             productName: productName,
             weight: order.weight || 1,
             totalAmount: amount,
-            notes: order.notes || '', // strictly empty unless notes exist
+            notes: order.notes || '', // Empty unless notes added
             fragile: order.isFragile ? 'OUI' : '',
             exchange: '',
             pickup: '',
