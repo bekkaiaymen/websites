@@ -21,6 +21,7 @@ const erpOrderSchema = new mongoose.Schema({
     name: String,
     phone: String,
     wilaya: String,
+    commune: String,
     address: String
   },
   products: [{ // قائمة المنتجات المطلوبة لحساب السعر الإجمالي

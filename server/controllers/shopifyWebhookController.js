@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const ErpOrder = require('../models/ErpOrder');
 const ErpExpense = require('../models/ErpExpense');
 const Merchant = require('../models/Merchant');
+const { getWilayaName } = require('../utils/wilayasMapping');
 
 /**
  * Shopify Webhook Controller
@@ -166,6 +167,14 @@ function extractAddressComponents(shopifyOrder) {
   if (commune === 'Not specified' && shippingAddress.city) {
     commune = shippingAddress.city;
     console.log(`   ℹ Fallback commune from shipping address: "${commune}"`);
+  }
+
+  // Convert numeric IDs to real names (e.g., "47" -> "Ghardaia")
+  if (!isNaN(Number(wilaya)) && wilaya !== 'Not specified' && wilaya.trim() !== '') {
+    wilaya = getWilayaName(Number(wilaya)) || wilaya;
+  }
+  if (!isNaN(Number(commune)) && commune !== 'Not specified' && commune.trim() !== '') {
+    commune = getWilayaName(Number(commune)) || commune;
   }
 
   return {

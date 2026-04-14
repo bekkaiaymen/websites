@@ -759,14 +759,13 @@ const ShopifyOrders = () => {
                       <td className="px-6 py-4 flex gap-2 flex-wrap">
                         <button
                           onClick={() => {
-                            // Auto-populate stopDesk and commune from Shopify data if available
                             setEditingOrder({
                               ...order,
                               customerData: {
                                 ...order.customerData,
-                                commune: order.customerData?.commune || order.customerData?.wilaya || ''
+                                commune: order.customerData?.commune || ''
                               },
-                              isStopDesk: order.isStopDesk === true // Correctly reflect the actual Stop Desk status
+                              isStopDesk: order.isStopDesk === true
                             });
                           }}
                           className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
