@@ -43,7 +43,22 @@ router.post('/upload-reconciliation', async (req, res) => {
     }
     
     const sheetName = workbook.SheetNames[0];
-    const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    
+    // ======================================================================
+    // الخطوة الذكية: كشف صف العنوان تلقائياً
+    // ملفات Ecotrack تبدأ بصف عنوان مثل "Paiements prêts | bekkai aymen"
+    // ثم الأعمدة الحقيقية في الصف الثاني. نحتاج لتخطي صف العنوان.
+    // ======================================================================
+    let data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    
+    // إذا كانت الأعمدة تحتوي على __EMPTY، فهذا يعني أن الصف الأول عنوان وليس أعمدة
+    const hasEmptyColumns = data.length > 0 && Object.keys(data[0]).some(k => k.startsWith('__EMPTY'));
+    
+    if (hasEmptyColumns) {
+      console.log('📊 Detected title row, skipping to row 2 for headers...');
+      // نقرأ مرة أخرى مع تخطي الصف الأول (range: 1)
+      data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], { range: 1 });
+    }
     
     // طباعة أسماء الأعمدة للتشخيص
     if (data.length > 0) {
@@ -51,7 +66,6 @@ router.post('/upload-reconciliation', async (req, res) => {
       console.log('📊 First row sample:', JSON.stringify(data[0]));
     } else {
       console.log('⚠️ Excel file has 0 rows in sheet:', sheetName);
-      console.log('⚠️ All sheets:', workbook.SheetNames);
     }
 
     // الإسم المعطى لشركة التوصيل من الواجهة، وتاريخ المعالجة (تاريخ المرتجعات لهذا الشهر)
@@ -68,15 +82,29 @@ router.post('/upload-reconciliation', async (req, res) => {
 
     // سنمر على كل سطر في الملف المرفق
     for (let row of data) {
-      // تفريغ الأعمدة الأساسية (التي رأيناها في الإكسل)
-      const trackingNumber = row['TrackingNumber'] || row['Code d\'envoi']; // قراءة من عمود ZR 
-      const stateName = row['State.Name']?.trim().toLowerCase(); 
-      const rowType = row['Type']?.toString().trim().toLowerCase(); // كما رأينا في ملف Paiements Hub/Return
-
-      let deliveryPrice = parseFloat(row['DeliveryPrice']) || 0;
-      if(row['Montant (DA)']) deliveryPrice = parseFloat(row['Montant (DA)']); // إذا كان عمود فرنسي بديل
-
-      let totalAmount = parseFloat(row['TotalAmount'] || row['Montant']) || 0;
+      // ======================================================================
+      // استخراج الأعمدة بشكل ذكي يدعم جميع شركات التوصيل
+      // Ecotrack: Tracking, montant, Frais de livraison, Type
+      // ZR: TrackingNumber, State.Name, DeliveryPrice, TotalAmount
+      // Yalidine: Code d'envoi, Montant (DA), Montant
+      // ======================================================================
+      const trackingNumber = (
+        row['Tracking'] ||           // Ecotrack
+        row['TrackingNumber'] ||     // ZR
+        row["Code d'envoi"] ||       // Yalidine / أنظمة فرنسية
+        row['tracking'] ||           // lowercase
+        ''
+      ).toString().trim();
+      
+      // نوع العملية (توصيل أو مرتجع)
+      const rowType = (row['Type'] || row['type'] || '').toString().trim().toLowerCase();
+      const stateName = (row['State.Name'] || row['Statut'] || row['statut'] || '').toString().trim().toLowerCase();
+      
+      // المبلغ المحصّل (COD)
+      let totalAmount = parseFloat(row['montant'] || row['TotalAmount'] || row['Montant'] || row['Montant (DA)'] || 0);
+      
+      // رسوم التوصيل
+      let deliveryPrice = parseFloat(row['Frais de livraison'] || row['DeliveryPrice'] || row['Frais livraison'] || 0);
 
       if (!trackingNumber) continue;
 
@@ -98,9 +126,26 @@ router.post('/upload-reconciliation', async (req, res) => {
       }
 
       // 1. حالة التوصيل الناجح: 
-      // سواء كان recupere أو في ملف الـ Paiements وجدنا delivery-person/hub
-      const isDelivered = stateName === 'recouvert' || rowType === 'delivery-person' || rowType === 'hub' || stateName === 'livré' || stateName === 'delivered';
-      const isReturned = stateName === 'recupere_par_fournisseur' || rowType === 'return' || stateName === 'retour' || stateName === 'returned';
+      // Ecotrack: Type = "Livraison domicile", "Livraison stop desk", etc.
+      // ZR: State.Name = "recouvert", Type = "delivery-person" / "hub"
+      const isDelivered = (
+        stateName === 'recouvert' || 
+        rowType === 'delivery-person' || 
+        rowType === 'hub' || 
+        stateName === 'livré' || 
+        stateName === 'delivered' ||
+        rowType.includes('livraison')  // Ecotrack: "livraison domicile", "livraison stop desk"
+      );
+      // Ecotrack: Type = "Retour" / Historique retours
+      // ZR: State.Name = "recupere_par_fournisseur", Type = "return"
+      const isReturned = (
+        stateName === 'recupere_par_fournisseur' || 
+        rowType === 'return' || 
+        stateName === 'retour' || 
+        stateName === 'returned' ||
+        rowType === 'retour' ||
+        rowType.includes('retour')
+      );
 
       if (isDelivered && order.status !== 'paid') {
         order.status = 'paid';
