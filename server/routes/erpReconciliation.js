@@ -78,10 +78,14 @@ router.post('/upload-reconciliation', upload.single('file'), async (req, res) =>
 
       let isModified = false;
 
+      if (!order.financials) {
+        order.financials = {};
+      }
+
       // 1. حالة التوصيل الناجح: 
       // سواء كان recupere أو في ملف الـ Paiements وجدنا delivery-person/hub
-      const isDelivered = stateName === 'recouvert' || rowType === 'delivery-person' || rowType === 'hub';
-      const isReturned = stateName === 'recupere_par_fournisseur' || rowType === 'return';
+      const isDelivered = stateName === 'recouvert' || rowType === 'delivery-person' || rowType === 'hub' || stateName === 'livré' || stateName === 'delivered';
+      const isReturned = stateName === 'recupere_par_fournisseur' || rowType === 'return' || stateName === 'retour' || stateName === 'returned';
 
       if (isDelivered && order.status !== 'paid') {
         order.status = 'paid';
@@ -144,7 +148,8 @@ router.post('/upload-reconciliation', upload.single('file'), async (req, res) =>
     });
 
   } catch (error) {
-    res.status(500).json({ error: 'حدث خطأ أثناء معالجة الملف', details: error.message });
+    console.error('Reconciliation Upload Error: ', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء معالجة الملف', details: error.stack });
   }
 });
 
