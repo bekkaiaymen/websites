@@ -53,12 +53,18 @@ const AdminReconciliation = () => {
         body: formData
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setResult(data);
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        const data = await response.json();
+        if (response.ok) {
+          setResult(data);
+        } else {
+          setError(data.error || 'حدث خطأ أثناء معالجة الملف.');
+        }
       } else {
-        setError(data.error || 'حدث خطأ أثناء معالجة الملف.');
+        const text = await response.text();
+        console.error("Non-JSON response:", text);
+        setError("يبدو أن السيرفر يتحدث (Deploying) أو متوقف مؤقتاً، يرجى الانتظار دقيقة ثم المحاولة مجدداً.");
       }
     } catch (err) {
       setError('خطأ في الاتصال بالخادم: ' + err.message);
