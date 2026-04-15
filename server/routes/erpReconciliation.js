@@ -1,31 +1,33 @@
 const express = require('express');
 const router = express.Router();
-const xlsx = require('xlsx'); // تدعم قراءة CSV و Excel
+const xlsx = require('xlsx');
 const ErpOrder = require('../models/ErpOrder');
 const Merchant = require('../models/Merchant');
-const DeliveryCompany = require('../models/DeliveryCompany'); // التحكم بأسعار الشركات والتاريخ
+const DeliveryCompany = require('../models/DeliveryCompany');
 
-// دالة مساعدة لاصطياد سعر الشركة من إعداداتك الخاصة (أندرسون بـ 50، أو 100 حسب التاريخ)
+// دالة مساعدة لاصطياد سعر الشركة من إعداداتك الخاصة
 const getCompanyReturnFee = async (companyName, referenceDate = new Date()) => {
   if (!companyName) return null;
   const company = await DeliveryCompany.findOne({ name: new RegExp('^' + companyName + '$', 'i') });
   
   if (!company || !company.returnPricingRules || company.returnPricingRules.length === 0) {
-    return null; // إذا لم تبرمج للشركة سعر خاص، ارجع null
+    return null;
   }
 
-  // البحث عن السعر الذي يوافق تاريخ رفع الإكسل (مثلا تسعيرة شهر مارس أو أفريل)
   const applicableRule = company.returnPricingRules.find(rule => {
     const isAfterStart = referenceDate >= rule.startDate;
     const isBeforeEnd = rule.endDate ? (referenceDate <= rule.endDate) : true;
     return isAfterStart && isBeforeEnd;
   });
 
-  return applicableRule ? applicableRule.returnFeeDzd : null; // لو وجدنا 50، سنعيد 50
+  return applicableRule ? applicableRule.returnFeeDzd : null;
 };
 
-// مسار رفع وقراءة ملف الـ CSV/Excel لشركة التوصيل (ZR / Ecotrack / Anderson)
-// نستخدم express-fileupload (المُفعّل عالمياً في index.js) بدلاً من multer لتجنب التعارض
+// ======================================================================
+// مسار رفع وقراءة ملف الـ CSV/Excel لشركة التوصيل
+// يدعم: Ecotrack, ZR, Yalidine, Anderson
+// يستخدم express-fileupload (المُفعّل عالمياً في index.js)
+// ======================================================================
 router.post('/upload-reconciliation', async (req, res) => {
   if (!req.files || !req.files.file) {
     return res.status(400).json({ error: 'الرجاء إرفاق ملف CSV أو Excel' });
@@ -34,7 +36,7 @@ router.post('/upload-reconciliation', async (req, res) => {
   try {
     const uploadedFile = req.files.file;
     
-    // express-fileupload مُعد بـ useTempFiles:true، لذا نقرأ من المسار المؤقت
+    // قراءة الملف من المسار المؤقت (useTempFiles: true في index.js)
     let workbook;
     if (uploadedFile.tempFilePath) {
       workbook = xlsx.readFile(uploadedFile.tempFilePath);
@@ -45,34 +47,33 @@ router.post('/upload-reconciliation', async (req, res) => {
     const sheetName = workbook.SheetNames[0];
     
     // ======================================================================
-    // الخطوة الذكية: كشف صف العنوان تلقائياً
+    // كشف صف العنوان تلقائياً
     // ملفات Ecotrack تبدأ بصف عنوان مثل "Paiements prêts | bekkai aymen"
-    // ثم الأعمدة الحقيقية في الصف الثاني. نحتاج لتخطي صف العنوان.
+    // ثم الأعمدة الحقيقية في الصف الثاني
     // ======================================================================
     let data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
     
-    // إذا كانت الأعمدة تحتوي على __EMPTY، فهذا يعني أن الصف الأول عنوان وليس أعمدة
-    const hasEmptyColumns = data.length > 0 && Object.keys(data[0]).some(k => k.startsWith('__EMPTY'));
+    // إذا كانت الأعمدة تحتوي على __EMPTY، الصف الأول عنوان وليس أعمدة
+    const firstRowKeys = data.length > 0 ? Object.keys(data[0]) : [];
+    const hasEmptyColumns = firstRowKeys.some(k => k.startsWith('__EMPTY'));
     
     if (hasEmptyColumns) {
-      console.log('📊 Detected title row, skipping to row 2 for headers...');
-      // نقرأ مرة أخرى مع تخطي الصف الأول (range: 1)
+      console.log('📊 Detected title row, re-reading with range:1...');
       data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], { range: 1 });
+      console.log('📊 After re-read, columns:', data.length > 0 ? Object.keys(data[0]) : 'EMPTY');
     }
     
     // طباعة أسماء الأعمدة للتشخيص
-    if (data.length > 0) {
-      console.log('📊 Excel Columns detected:', Object.keys(data[0]));
-      console.log('📊 First row sample:', JSON.stringify(data[0]));
-    } else {
-      console.log('⚠️ Excel file has 0 rows in sheet:', sheetName);
-    }
+    const detectedColumns = data.length > 0 ? Object.keys(data[0]) : [];
+    const sampleRow = data.length > 0 ? data[0] : null;
+    console.log('📊 Final columns:', detectedColumns);
+    if (sampleRow) console.log('📊 Sample row:', JSON.stringify(sampleRow));
 
-    // الإسم المعطى لشركة التوصيل من الواجهة، وتاريخ المعالجة (تاريخ المرتجعات لهذا الشهر)
+    // الإسم المعطى لشركة التوصيل من الواجهة
     const { companyName, reconciliationDate } = req.body;
     const processingDate = reconciliationDate ? new Date(reconciliationDate) : new Date();
 
-    // البحث في جدول DeliveryCompany عن غرامة المرتجعات المبرمجة سابقاً لهذه الشركة (مثل Anderson 50 DZD)
+    // البحث عن غرامة المرتجعات المبرمجة سابقاً لهذه الشركة
     const companyReturnFeeOverride = await getCompanyReturnFee(companyName, processingDate);
 
     let processedCount = 0;
@@ -80,24 +81,25 @@ router.post('/upload-reconciliation', async (req, res) => {
     let returnsCount = 0;
     const errors = [];
 
-    // سنمر على كل سطر في الملف المرفق
     for (let row of data) {
       // ======================================================================
       // استخراج الأعمدة بشكل ذكي يدعم جميع شركات التوصيل
       // Ecotrack: Tracking, montant, Frais de livraison, Type
       // ZR: TrackingNumber, State.Name, DeliveryPrice, TotalAmount
-      // Yalidine: Code d'envoi, Montant (DA), Montant
+      // Yalidine: Code d'envoi, Montant (DA)
       // ======================================================================
-      const trackingNumber = (
-        row['Tracking'] ||           // Ecotrack
-        row['TrackingNumber'] ||     // ZR
-        row["Code d'envoi"] ||       // Yalidine / أنظمة فرنسية
-        row['tracking'] ||           // lowercase
+      const rawTracking = (
+        row['Tracking'] ||
+        row['TrackingNumber'] ||
+        row["Code d'envoi"] ||
+        row['tracking'] ||
         ''
-      ).toString().trim();
+      );
+      const trackingNumber = rawTracking.toString().trim();
       
       // نوع العملية (توصيل أو مرتجع)
       const rowType = (row['Type'] || row['type'] || '').toString().trim().toLowerCase();
+      const prestationType = (row['Type de préstation'] || row['Type de prestation'] || '').toString().trim().toLowerCase();
       const stateName = (row['State.Name'] || row['Statut'] || row['statut'] || '').toString().trim().toLowerCase();
       
       // المبلغ المحصّل (COD)
@@ -125,32 +127,34 @@ router.post('/upload-reconciliation', async (req, res) => {
         order.financials = {};
       }
 
-      // 1. حالة التوصيل الناجح: 
-      // Ecotrack: Type = "Livraison domicile", "Livraison stop desk", etc.
-      // ZR: State.Name = "recouvert", Type = "delivery-person" / "hub"
+      // ======================================================================
+      // كشف حالة التوصيل أو المرتجع
+      // ======================================================================
       const isDelivered = (
         stateName === 'recouvert' || 
         rowType === 'delivery-person' || 
         rowType === 'hub' || 
         stateName === 'livré' || 
         stateName === 'delivered' ||
-        rowType.includes('livraison')  // Ecotrack: "livraison domicile", "livraison stop desk"
+        rowType.includes('livraison') ||
+        prestationType.includes('livraison')
       );
-      // Ecotrack: Type = "Retour" / Historique retours
-      // ZR: State.Name = "recupere_par_fournisseur", Type = "return"
+      
       const isReturned = (
         stateName === 'recupere_par_fournisseur' || 
         rowType === 'return' || 
         stateName === 'retour' || 
         stateName === 'returned' ||
         rowType === 'retour' ||
-        rowType.includes('retour')
+        rowType.includes('retour') ||
+        prestationType.includes('retour')
       );
 
+      // 1. توصيل ناجح
       if (isDelivered && order.status !== 'paid') {
         order.status = 'paid';
-        order.financials.amountCollected = totalAmount; // 3200 DZD
-        order.financials.deliveryFee = deliveryPrice;  // 650 DZD
+        order.financials.amountCollected = totalAmount;
+        order.financials.deliveryFee = deliveryPrice;
 
         let fee = 0;
         if (merchant && merchant.financialSettings) {
@@ -163,21 +167,16 @@ router.post('/upload-reconciliation', async (req, res) => {
         successCount++;
         isModified = true;
       } 
-      // 2. حالة الطرد المرتجع 
+      // 2. طرد مرتجع
       else if (isReturned && order.status !== 'returned') {
         order.status = 'returned';
         
-        // *النقطة السحرية التي طلبتها الآن* (التحكم بسعر المرتجع)
-        // إذا كنت قد عينت للشركة سعراً (مثلا 50 د.ج لأندرسون)، سيفرضه النظام ويتجاهل رقم الإكسل ذي الـ 650 أو 200
-        // وإذا لم تعين شيئاً.. سيأخذ رقم الإكسل (deliveryPrice)
-        if(companyReturnFeeOverride !== null) {
-            order.financials.returnedPenaltyFee = companyReturnFeeOverride;
+        if (companyReturnFeeOverride !== null) {
+          order.financials.returnedPenaltyFee = companyReturnFeeOverride;
         } else {
-            // كخيار بديل إذا قرأناها من الإكسل مباشرة (مثل السطر 4 في رسالتك: return 200,00 DA)
-            order.financials.returnedPenaltyFee = deliveryPrice;
+          order.financials.returnedPenaltyFee = deliveryPrice;
         }
 
-        // حق متابعتك الخاص بك في المرتجعات (صفر أو 50... يسحب من التاجر كعقوبة عليه)
         let returnFee = 0;
         if (merchant && merchant.financialSettings) {
           returnFee = merchant.financialSettings.followUpFeeReturn || 0;
@@ -204,7 +203,7 @@ router.post('/upload-reconciliation', async (req, res) => {
     }
 
     res.status(200).json({
-      message: 'تمت معالجة الإكسل بنجاح مع تطبيق أسعار الشركات المخصصة (إن وجدت)',
+      message: 'تمت معالجة الإكسل بنجاح',
       stats: {
         appliedReturnFeeRateDzd: companyReturnFeeOverride !== null ? companyReturnFeeOverride : 'استُخرج من الإكسل',
         totalRows: data.length,
@@ -212,9 +211,10 @@ router.post('/upload-reconciliation', async (req, res) => {
         successfullyDelivered: successCount,
         returnedToSupplier: returnsCount,
         errors: errors.length > 0 ? errors : null,
-        detectedColumns: data.length > 0 ? Object.keys(data[0]) : [],
-        sampleRow: data.length > 0 ? data[0] : null,
-        sheetName: sheetName
+        detectedColumns: detectedColumns,
+        sampleRow: sampleRow,
+        sheetName: sheetName,
+        headerAutoDetected: hasEmptyColumns
       }
     });
 
@@ -225,7 +225,7 @@ router.post('/upload-reconciliation', async (req, res) => {
 });
 
 // ============================================
-// مسار التحكم المباشر وتعديل سعر المرتجع (بالـ "وحدة" أي لطلبية محددة)
+// مسار التحكم المباشر وتعديل سعر المرتجع
 // ============================================
 router.put('/order-override/:id', async (req, res) => {
   try {
@@ -234,18 +234,15 @@ router.put('/order-override/:id', async (req, res) => {
     
     if (!order) return res.status(404).json({ error: 'الطلبية غير موجودة' });
 
-    // في حال أردت الدخول وتغيير غرامة المرتجع إلى 0 أو 400 يدوياً لطلبية واحدة
     if (returnedPenaltyFee !== undefined) order.financials.returnedPenaltyFee = returnedPenaltyFee;
-    
-    // إذا تعبت فيها وتلاعبت بالتاجر يمكنك تغيير حق متابعتك لها من 0 إلى 150 مثلا
     if (followUpFeeApplied !== undefined) order.financials.followUpFeeApplied = followUpFeeApplied;
-    
-    if (status !== undefined) order.status = status; // تغيير الحالة يدوياً
+    if (status !== undefined) order.status = status;
 
     await order.save();
-    res.json({ message: 'تم التعديل اليدوي للطلبية بنجاح (تجاوز الإكسل)', order });
+    res.json({ message: 'تم التعديل بنجاح', order });
   } catch (error) {
-    res.status(500).json({ error: 'حدث خطأ في التعديل', details: error.message });
+    console.error('Override error:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء التعديل', details: error.message });
   }
 });
 
