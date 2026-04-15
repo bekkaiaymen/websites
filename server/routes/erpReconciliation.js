@@ -200,7 +200,8 @@ router.post('/upload-reconciliation', async (req, res) => {
              priceDzd: totalAmount,
              quantity: 1
           }],
-          merchantId: historicalOrder ? historicalOrder.merchantId : null,
+          // إذا لم نجد طلبية سابقة للاستنتاج منها، نربطها بأول تاجر في النظام (بما أنك حالياً تعمل مع تاجر واحد)
+          merchantId: historicalOrder ? historicalOrder.merchantId : (await Merchant.findOne())?._id || null,
           status: 'shipped', // ليتم تسويتها لاحقاً في نفس هذا الكود
           isConfirmed: true,
           financials: {}
