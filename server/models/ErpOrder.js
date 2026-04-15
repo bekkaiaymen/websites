@@ -10,11 +10,11 @@ const erpOrderSchema = new mongoose.Schema({
   merchantId: { // صاحب المتجر الذي تعود له الطلبية
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Merchant',
-    required: true
+    required: false
   },
   source: { // لمعرفة حق المتابعة (صفحة 200 د.ج أم شوبيفاي 180 د.ج)
     type: String,
-    enum: ['shopify', 'facebook', 'manual'],
+    enum: ['shopify', 'facebook', 'manual', 'excel_auto_import'],
     required: true
   },
   customerData: {
