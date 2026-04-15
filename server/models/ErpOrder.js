@@ -56,11 +56,6 @@ const erpOrderSchema = new mongoose.Schema({
   deliveryCompany: { // ياليدين، ZR، أندرسون وغيرها لمطابقة ملفاتها
     type: String
   },
-  deliveryTrackingId: { // رقم التتبع الخاص بشركة التوصيل (يُملأ عند استلام ملف التسوية)
-    type: String,
-    default: null,
-    index: true
-  },
   
   // --------------- الخيارات الخاصة (Special Options) ---------------
   isFragile: { // هل الطلبية قابلة للكسر
