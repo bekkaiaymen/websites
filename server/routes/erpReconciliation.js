@@ -79,6 +79,7 @@ router.post('/upload-reconciliation', async (req, res) => {
     let processedCount = 0;
     let successCount = 0;
     let returnsCount = 0;
+    let autoImportedCount = 0;
     let totalCollectedDzd = 0;
     let totalDeliveryFeesDzd = 0;
     let totalFollowUpFeesDzd = 0;
@@ -156,13 +157,69 @@ router.post('/upload-reconciliation', async (req, res) => {
         if (order) matchMethod = 'phone';
       }
       
+      // Fallback 2: إنشاء الطلبية تلقائياً (Auto-import) لتفادي ظهورها في الأخطاء
       if (!order) {
-        errors.push(`الطلبية ${trackingNumber} (هاتف: ${rawPhone || 'غير متوفر'}) غير موجودة في النظام`);
+        // استخراج بيانات الزبون من الإكسل
+        const customerName = row['déstinataire'] || row['Destinataire'] || row['Client'] || row['Customer.Name'] || row['nom'] || 'استيراد تلقائي';
+        const wilaya = row['Wilaya'] || row['wilaya'] || '';
+        const commune = row['Commune'] || row['commune'] || '';
+        const produits = row['Produits'] || row['produit'] || row['articles'] || row['Designation'] || 'منتجات مستوردة';
+
+        let historicalOrder = null;
+        if (cleanPhone && cleanPhone.length >= 9) {
+          const phoneVariants = [
+            cleanPhone,
+            cleanPhone.replace(/^0/, '+213'),
+            cleanPhone.replace(/^0/, '213'),
+            cleanPhone.slice(-9)
+          ];
+          // نبحث في أي طلبية سابقة مهما كانت حالتها لوراثة التاجر وباقي المعلومات
+          historicalOrder = await ErpOrder.findOne({
+            $or: [
+              { 'customerData.phone': { $in: phoneVariants } },
+              { 'customerData.phone': { $regex: cleanPhone.slice(-9) + '$' } }
+            ]
+          }).sort({ createdAt: -1 });
+        }
+
+        order = new ErpOrder({
+          trackingId: trackingNumber,
+          deliveryTrackingId: trackingNumber,
+          deliveryCompany: companyName || '',
+          source: 'excel_auto_import',
+          totalAmountDzd: totalAmount,
+          customerData: {
+            name: historicalOrder?.customerData?.name || customerName,
+            phone: historicalOrder?.customerData?.phone || rawPhone,
+            wilaya: historicalOrder?.customerData?.wilaya || wilaya,
+            commune: historicalOrder?.customerData?.commune || commune,
+            address: historicalOrder?.customerData?.address || ''
+          },
+          products: [{
+             name: produits.toString().substring(0, 100), // حماية من النصوص الطويلة
+             priceDzd: totalAmount,
+             quantity: 1
+          }],
+          merchantId: historicalOrder ? historicalOrder.merchantId : null,
+          status: 'shipped', // ليتم تسويتها لاحقاً في نفس هذا الكود
+          isConfirmed: true,
+          financials: {}
+        });
+        
+        await order.save();
+        autoImportedCount++;
+        
+        if (order.merchantId) {
+          await order.populate('merchantId');
+        }
+      }
+
+      if (!order) {
+        errors.push(`فشل استيراد الطلبية ${trackingNumber} (هاتف: ${rawPhone || 'غير متوفر'})`);
         continue;
       }
 
       const merchant = order.merchantId;
-      if (!merchant) continue;
 
       let isModified = false;
 
@@ -272,6 +329,7 @@ router.post('/upload-reconciliation', async (req, res) => {
         processed: processedCount,
         successfullyDelivered: successCount,
         returnedToSupplier: returnsCount,
+        autoImported: autoImportedCount,
         // ملخص مالي فوري
         financialSummary: {
           totalCollectedDzd,

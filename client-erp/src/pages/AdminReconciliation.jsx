@@ -198,7 +198,7 @@ const AdminReconciliation = () => {
                   <h2 className="text-2xl font-bold text-white">اكتملت التسوية بنجاح</h2>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
                   <div className="bg-[#1a120f] border border-gray-700 p-4 rounded-xl text-center">
                     <p className="text-gray-400 text-sm mb-1">الأسطر المقروءة</p>
                     <p className="text-3xl font-bold text-white">{result.stats?.totalRows || 0}</p>
@@ -206,6 +206,10 @@ const AdminReconciliation = () => {
                   <div className="bg-[#1a120f] border border-brand-gold/30 p-4 rounded-xl text-center">
                     <p className="text-gray-400 text-sm mb-1">تمت معالجتها</p>
                     <p className="text-3xl font-bold text-brand-gold">{result.stats?.processed || 0}</p>
+                  </div>
+                  <div className="bg-blue-900/20 border border-blue-500/30 p-4 rounded-xl text-center">
+                    <p className="text-gray-400 text-sm mb-1">استيراد تلقائي</p>
+                    <p className="text-3xl font-bold text-blue-400">{result.stats?.autoImported || 0}</p>
                   </div>
                   <div className="bg-green-900/20 border border-green-500/30 p-4 rounded-xl text-center">
                     <p className="text-gray-400 text-sm mb-1">توصيل ناجح</p>
