@@ -129,8 +129,16 @@ router.post('/upload-reconciliation', upload.single('file'), async (req, res) =>
       }
 
       if (isModified) {
-        order.excelReconciliationDate = processingDate;
-        await order.save();
+        await ErpOrder.updateOne(
+          { _id: order._id },
+          { 
+            $set: {
+               status: order.status,
+               financials: order.financials,
+               excelReconciliationDate: processingDate
+            }
+          }
+        );
         processedCount++;
       }
     }
