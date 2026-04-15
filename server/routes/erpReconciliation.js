@@ -80,6 +80,7 @@ router.post('/upload-reconciliation', async (req, res) => {
     let successCount = 0;
     let returnsCount = 0;
     let autoImportedCount = 0;
+    let alreadySettledCount = 0;
     let totalCollectedDzd = 0;
     let totalDeliveryFeesDzd = 0;
     let totalFollowUpFeesDzd = 0;
@@ -252,41 +253,49 @@ router.post('/upload-reconciliation', async (req, res) => {
       );
 
       // 1. توصيل ناجح
-      if (isDelivered && order.status !== 'paid') {
-        order.status = 'paid';
-        order.financials.amountCollected = totalAmount;
-        order.financials.deliveryFee = deliveryPrice;
+      if (isDelivered) {
+        if (order.status !== 'paid') {
+          order.status = 'paid';
+          order.financials.amountCollected = totalAmount;
+          order.financials.deliveryFee = deliveryPrice;
 
-        let fee = 0;
-        if (merchant && merchant.financialSettings) {
-          fee = order.source === 'shopify' 
-            ? merchant.financialSettings.followUpFeeSuccessSpfy 
-            : merchant.financialSettings.followUpFeeSuccessPage;
+          let fee = 0;
+          if (merchant && merchant.financialSettings) {
+            fee = order.source === 'shopify' 
+              ? merchant.financialSettings.followUpFeeSuccessSpfy 
+              : merchant.financialSettings.followUpFeeSuccessPage;
+          }
+          
+          order.financials.followUpFeeApplied = fee || 0;
+          successCount++;
+          isModified = true;
+        } else {
+          alreadySettledCount++;
         }
-        
-        order.financials.followUpFeeApplied = fee || 0;
-        successCount++;
-        isModified = true;
       } 
       // 2. طرد مرتجع
-      else if (isReturned && order.status !== 'returned') {
-        order.status = 'returned';
-        order.financials.deliveryFee = deliveryPrice; // حفظ رسوم التوصيل حتى للمرتجعات
-        
-        if (companyReturnFeeOverride !== null) {
-          order.financials.returnedPenaltyFee = companyReturnFeeOverride;
-        } else {
-          order.financials.returnedPenaltyFee = deliveryPrice;
-        }
+      else if (isReturned) {
+        if (order.status !== 'returned') {
+          order.status = 'returned';
+          order.financials.deliveryFee = deliveryPrice; // حفظ رسوم التوصيل حتى للمرتجعات
+          
+          if (companyReturnFeeOverride !== null) {
+            order.financials.returnedPenaltyFee = companyReturnFeeOverride;
+          } else {
+            order.financials.returnedPenaltyFee = deliveryPrice;
+          }
 
-        let returnFee = 0;
-        if (merchant && merchant.financialSettings) {
-          returnFee = merchant.financialSettings.followUpFeeReturn || 0;
+          let returnFee = 0;
+          if (merchant && merchant.financialSettings) {
+            returnFee = merchant.financialSettings.followUpFeeReturn || 0;
+          }
+          order.financials.followUpFeeApplied = returnFee;
+          
+          returnsCount++;
+          isModified = true;
+        } else {
+          alreadySettledCount++;
         }
-        order.financials.followUpFeeApplied = returnFee;
-        
-        returnsCount++;
-        isModified = true;
       }
 
       if (isModified) {
@@ -331,6 +340,7 @@ router.post('/upload-reconciliation', async (req, res) => {
         successfullyDelivered: successCount,
         returnedToSupplier: returnsCount,
         autoImported: autoImportedCount,
+        alreadySettled: alreadySettledCount,
         // ملخص مالي فوري
         financialSummary: {
           totalCollectedDzd,

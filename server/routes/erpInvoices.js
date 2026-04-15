@@ -91,9 +91,10 @@ router.post('/generate/:merchantId', async (req, res) => {
         if (e.allocationMode === 'split') {
             amount = (e.amount * e.splitRatio.merchantPct) / 100;
         }
-        // تحويل للدينار وفق سعر تسويق التاجر إذا كان المصروف بالدولار
+        // تحويل للدينار وفق سعر تسويق التاجر إذا كان المصروف بالدولار (الافتراضي 330)
         if(e.currency === 'USD') {
-            amount = amount * merchant.financialSettings.adSaleCostDzd; 
+            const saleCost = merchant.financialSettings?.adSaleCostDzd || 330;
+            amount = amount * saleCost; 
         }
         totalExpensesDzd += amount;
         return { title: e.title, amountDzd: amount, type: e.allocationMode };
@@ -143,7 +144,7 @@ router.post('/generate/:merchantId', async (req, res) => {
           .filter(o => o.status === 'paid')
           .map(o => ({
             orderId: o._id,
-            clientName: o.clientName || 'مجهول',
+            clientName: o.customerData?.name || 'مجهول',
             deliveryPrice: o.financials.deliveryFee,
             followUpFee: o.financials.followUpFeeApplied
           })),
@@ -151,7 +152,7 @@ router.post('/generate/:merchantId', async (req, res) => {
           .filter(o => o.status === 'returned')
           .map(o => ({
             orderId: o._id,
-            clientName: o.clientName || 'مجهول',
+            clientName: o.customerData?.name || 'مجهول',
             deliveryPrice: o.financials.deliveryFee,
             returnedFee: o.financials.returnedPenaltyFee
           }))

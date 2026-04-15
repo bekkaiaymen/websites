@@ -331,9 +331,9 @@ const AdminInvoices = () => {
                   onChange={(e) => setGenerateForm({...generateForm, merchantId: e.target.value})}
                   className="w-full bg-[#1a120f] border border-gray-700 rounded p-2 text-white"
                 >
-                  <option value="">-- اختر --</option>
+                  <option value="" className="text-gray-200 bg-[#1a120f]">-- اختر --</option>
                   {merchants.map(m => (
-                    <option key={m._id} value={m._id}>{m.businessName}</option>
+                    <option key={m._id} value={m._id} className="text-white bg-[#1a120f]">{m.businessName}</option>
                   ))}
                 </select>
               </div>
