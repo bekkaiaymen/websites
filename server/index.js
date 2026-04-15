@@ -4,6 +4,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcryptjs = require('bcryptjs');
 const fileUpload = require('express-fileupload');
+const os = require('os');
 const Order = require('./models/Order');
 const Category = require('./models/Category');
 const Product = require('./models/Product');
@@ -39,7 +40,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(fileUpload({
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
   useTempFiles: true,
-  tempFileDir: '/tmp/'
+  tempFileDir: os.tmpdir()
 }));
 
 // Authentication Middleware

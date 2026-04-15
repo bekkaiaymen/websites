@@ -217,6 +217,47 @@ const AdminReconciliation = () => {
                   </div>
                 </div>
 
+                {/* 💰 Financial Summary */}
+                {result.stats?.financialSummary && (
+                  <div className="bg-gradient-to-br from-[#1a120f] to-[#2a1f1a] rounded-xl border border-brand-gold/30 p-6 mb-6 shadow-lg">
+                    <h3 className="text-xl font-bold text-brand-gold border-b border-brand-gold/20 pb-3 mb-5 flex items-center gap-2">
+                      💰 الملخص المالي الفوري
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center py-2 px-3 bg-green-900/15 rounded-lg">
+                        <span className="text-gray-300">إجمالي المبالغ المحصّلة (COD)</span>
+                        <span className="text-2xl font-bold text-green-400">
+                          {Number(result.stats.financialSummary.totalCollectedDzd || 0).toLocaleString('fr-DZ')} DA
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 px-3 rounded-lg">
+                        <span className="text-gray-400">(-) رسوم التوصيل</span>
+                        <span className="font-semibold text-red-400">
+                          -{Number(result.stats.financialSummary.totalDeliveryFeesDzd || 0).toLocaleString('fr-DZ')} DA
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 px-3 rounded-lg">
+                        <span className="text-gray-400">(-) حق المتابعة (Follow-up)</span>
+                        <span className="font-semibold text-orange-400">
+                          -{Number(result.stats.financialSummary.totalFollowUpFeesDzd || 0).toLocaleString('fr-DZ')} DA
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 px-3 rounded-lg">
+                        <span className="text-gray-400">(-) غرامات المرتجعات</span>
+                        <span className="font-semibold text-red-400">
+                          -{Number(result.stats.financialSummary.totalReturnPenaltiesDzd || 0).toLocaleString('fr-DZ')} DA
+                        </span>
+                      </div>
+                      <div className="border-t border-brand-gold/30 mt-2 pt-4 flex justify-between items-center bg-brand-gold/10 py-3 px-4 rounded-xl">
+                        <span className="text-lg font-bold text-brand-gold">💵 الصافي المستحق للتاجر</span>
+                        <span className="text-3xl font-black text-white">
+                          {Number(result.stats.financialSummary.netPayoutDzd || 0).toLocaleString('fr-DZ')} DA
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="bg-[#1a120f] rounded-lg p-5 border border-gray-700 mb-6">
                   <h3 className="font-bold text-gray-300 border-b border-gray-800 pb-2 mb-3">تفاصيل المعالجة:</h3>
                   <ul className="space-y-2 text-sm">

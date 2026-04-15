@@ -79,6 +79,10 @@ router.post('/upload-reconciliation', async (req, res) => {
     let processedCount = 0;
     let successCount = 0;
     let returnsCount = 0;
+    let totalCollectedDzd = 0;
+    let totalDeliveryFeesDzd = 0;
+    let totalFollowUpFeesDzd = 0;
+    let totalReturnPenaltiesDzd = 0;
     const errors = [];
 
     for (let row of data) {
@@ -170,6 +174,7 @@ router.post('/upload-reconciliation', async (req, res) => {
       // 2. طرد مرتجع
       else if (isReturned && order.status !== 'returned') {
         order.status = 'returned';
+        order.financials.deliveryFee = deliveryPrice; // حفظ رسوم التوصيل حتى للمرتجعات
         
         if (companyReturnFeeOverride !== null) {
           order.financials.returnedPenaltyFee = companyReturnFeeOverride;
@@ -194,13 +199,26 @@ router.post('/upload-reconciliation', async (req, res) => {
             $set: {
                status: order.status,
                financials: order.financials,
+               deliveryCompany: companyName || '',
                excelReconciliationDate: processingDate
             }
           }
         );
         processedCount++;
+        // تجميع الإحصائيات المالية
+        if (order.status === 'paid') {
+          totalCollectedDzd += (order.financials.amountCollected || 0);
+          totalDeliveryFeesDzd += (order.financials.deliveryFee || 0);
+          totalFollowUpFeesDzd += (order.financials.followUpFeeApplied || 0);
+        } else if (order.status === 'returned') {
+          totalReturnPenaltiesDzd += (order.financials.returnedPenaltyFee || 0);
+          totalFollowUpFeesDzd += (order.financials.followUpFeeApplied || 0);
+        }
       }
     }
+
+    // حساب الصافي
+    const netPayoutDzd = totalCollectedDzd - totalDeliveryFeesDzd - totalFollowUpFeesDzd - totalReturnPenaltiesDzd;
 
     res.status(200).json({
       message: 'تمت معالجة الإكسل بنجاح',
@@ -210,6 +228,14 @@ router.post('/upload-reconciliation', async (req, res) => {
         processed: processedCount,
         successfullyDelivered: successCount,
         returnedToSupplier: returnsCount,
+        // ملخص مالي فوري
+        financialSummary: {
+          totalCollectedDzd,
+          totalDeliveryFeesDzd,
+          totalFollowUpFeesDzd,
+          totalReturnPenaltiesDzd,
+          netPayoutDzd
+        },
         errors: errors.length > 0 ? errors : null,
         detectedColumns: detectedColumns,
         sampleRow: sampleRow,

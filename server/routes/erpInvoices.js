@@ -144,7 +144,7 @@ router.post('/generate/:merchantId', async (req, res) => {
           .map(o => ({
             orderId: o._id,
             clientName: o.clientName || 'مجهول',
-            deliveryPrice: o.financials.courierDeliveryPrice,
+            deliveryPrice: o.financials.deliveryFee,
             followUpFee: o.financials.followUpFeeApplied
           })),
         returnedOrders: orders
@@ -152,7 +152,7 @@ router.post('/generate/:merchantId', async (req, res) => {
           .map(o => ({
             orderId: o._id,
             clientName: o.clientName || 'مجهول',
-            deliveryPrice: o.financials.courierDeliveryPrice,
+            deliveryPrice: o.financials.deliveryFee,
             returnedFee: o.financials.returnedPenaltyFee
           }))
       },
@@ -431,8 +431,8 @@ router.get('/:id/pdf', async (req, res) => {
       merchantId: merchant._id,
       status: 'paid',
       excelReconciliationDate: {
-        $gte: new Date(invoice.periodStart),
-        $lte: new Date(invoice.periodEnd)
+        $gte: new Date(invoice.periodStartDate),
+        $lte: new Date(invoice.periodEndDate)
       }
     }).sort({ excelReconciliationDate: 1 });
 
@@ -440,8 +440,8 @@ router.get('/:id/pdf', async (req, res) => {
       merchantId: merchant._id,
       status: 'returned',
       excelReconciliationDate: {
-        $gte: new Date(invoice.periodStart),
-        $lte: new Date(invoice.periodEnd)
+        $gte: new Date(invoice.periodStartDate),
+        $lte: new Date(invoice.periodEndDate)
       }
     }).sort({ excelReconciliationDate: 1 });
 
@@ -477,10 +477,10 @@ router.get('/:id/pdf', async (req, res) => {
     doc.fill('#333333');
     let y = 140;
     doc.fontSize(12).fill('#1a1a2e').text('Merchant / التاجر:', 40, y);
-    doc.fontSize(14).fill('#000000').text(merchant.name || 'N/A', 40, y + 18);
+    doc.fontSize(14).fill('#000000').text(merchant.name || merchant.businessName || 'N/A', 40, y + 18);
     
     doc.fontSize(10).fill('#666666');
-    doc.text(`Period: ${new Date(invoice.periodStart).toLocaleDateString('fr-DZ')} → ${new Date(invoice.periodEnd).toLocaleDateString('fr-DZ')}`, 300, y, { align: 'right', width: 255 });
+    doc.text(`Period: ${new Date(invoice.periodStartDate).toLocaleDateString('fr-DZ')} → ${new Date(invoice.periodEndDate).toLocaleDateString('fr-DZ')}`, 300, y, { align: 'right', width: 255 });
     doc.text(`Status: ${invoice.status || 'draft'}`, 300, y + 16, { align: 'right', width: 255 });
 
     // خط فاصل
@@ -635,8 +635,8 @@ router.get('/:id/data', async (req, res) => {
       merchantId: merchant._id,
       status: 'paid',
       excelReconciliationDate: {
-        $gte: new Date(invoice.periodStart),
-        $lte: new Date(invoice.periodEnd)
+        $gte: new Date(invoice.periodStartDate),
+        $lte: new Date(invoice.periodEndDate)
       }
     }).sort({ excelReconciliationDate: 1 }).lean();
 
@@ -644,8 +644,8 @@ router.get('/:id/data', async (req, res) => {
       merchantId: merchant._id,
       status: 'returned',
       excelReconciliationDate: {
-        $gte: new Date(invoice.periodStart),
-        $lte: new Date(invoice.periodEnd)
+        $gte: new Date(invoice.periodStartDate),
+        $lte: new Date(invoice.periodEndDate)
       }
     }).sort({ excelReconciliationDate: 1 }).lean();
 
