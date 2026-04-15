@@ -936,4 +936,14 @@ app.put('/api/admin/hint-settings', authenticateToken, async (req, res) => {
   }
 });
 
+// Global Error Handler to catch multer errors and others, preventing HTML output
+app.use((err, req, res, next) => {
+  console.error('Global Unhandled Error:', err);
+  res.status(500).json({ 
+    error: 'Internal Server Error', 
+    details: err.message,
+    stack: err.stack 
+  });
+});
+
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
