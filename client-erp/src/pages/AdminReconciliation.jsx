@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, RefreshCw, Layers } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import AdminNavbar from '../components/AdminNavbar';
 
 const AdminReconciliation = () => {
@@ -9,9 +10,16 @@ const AdminReconciliation = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   const token = localStorage.getItem('adminToken');
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
+    navigate('/admin/login');
+  };
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -61,7 +69,7 @@ const AdminReconciliation = () => {
 
   return (
     <div className="min-h-screen bg-[#1a120f] text-right" dir="rtl">
-      <AdminNavbar />
+      <AdminNavbar onLogout={handleLogout} />
       
       <div className="container mx-auto px-4 py-8 max-w-5xl">
         <div className="mb-8 border-b border-gray-800 pb-6">

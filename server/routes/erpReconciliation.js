@@ -88,11 +88,14 @@ router.post('/upload-reconciliation', upload.single('file'), async (req, res) =>
         order.financials.amountCollected = totalAmount; // 3200 DZD
         order.financials.deliveryFee = deliveryPrice;  // 650 DZD
 
-        const fee = order.source === 'shopify' 
-          ? merchant.financialSettings.followUpFeeSuccessSpfy 
-          : merchant.financialSettings.followUpFeeSuccessPage;
+        let fee = 0;
+        if (merchant && merchant.financialSettings) {
+          fee = order.source === 'shopify' 
+            ? merchant.financialSettings.followUpFeeSuccessSpfy 
+            : merchant.financialSettings.followUpFeeSuccessPage;
+        }
         
-        order.financials.followUpFeeApplied = fee;
+        order.financials.followUpFeeApplied = fee || 0;
         successCount++;
         isModified = true;
       } 
@@ -111,7 +114,11 @@ router.post('/upload-reconciliation', upload.single('file'), async (req, res) =>
         }
 
         // حق متابعتك الخاص بك في المرتجعات (صفر أو 50... يسحب من التاجر كعقوبة عليه)
-        order.financials.followUpFeeApplied = merchant.financialSettings.followUpFeeReturn;
+        let returnFee = 0;
+        if (merchant && merchant.financialSettings) {
+          returnFee = merchant.financialSettings.followUpFeeReturn || 0;
+        }
+        order.financials.followUpFeeApplied = returnFee;
         
         returnsCount++;
         isModified = true;
