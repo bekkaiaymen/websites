@@ -33,9 +33,26 @@ router.post('/upload-reconciliation', async (req, res) => {
 
   try {
     const uploadedFile = req.files.file;
-    const workbook = xlsx.read(uploadedFile.data, { type: 'buffer' });
+    
+    // express-fileupload مُعد بـ useTempFiles:true، لذا نقرأ من المسار المؤقت
+    let workbook;
+    if (uploadedFile.tempFilePath) {
+      workbook = xlsx.readFile(uploadedFile.tempFilePath);
+    } else {
+      workbook = xlsx.read(uploadedFile.data, { type: 'buffer' });
+    }
+    
     const sheetName = workbook.SheetNames[0];
     const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    
+    // طباعة أسماء الأعمدة للتشخيص
+    if (data.length > 0) {
+      console.log('📊 Excel Columns detected:', Object.keys(data[0]));
+      console.log('📊 First row sample:', JSON.stringify(data[0]));
+    } else {
+      console.log('⚠️ Excel file has 0 rows in sheet:', sheetName);
+      console.log('⚠️ All sheets:', workbook.SheetNames);
+    }
 
     // الإسم المعطى لشركة التوصيل من الواجهة، وتاريخ المعالجة (تاريخ المرتجعات لهذا الشهر)
     const { companyName, reconciliationDate } = req.body;
@@ -149,7 +166,10 @@ router.post('/upload-reconciliation', async (req, res) => {
         processed: processedCount,
         successfullyDelivered: successCount,
         returnedToSupplier: returnsCount,
-        errors: errors.length > 0 ? errors : null
+        errors: errors.length > 0 ? errors : null,
+        detectedColumns: data.length > 0 ? Object.keys(data[0]) : [],
+        sampleRow: data.length > 0 ? data[0] : null,
+        sheetName: sheetName
       }
     });
 

@@ -225,11 +225,37 @@ const AdminReconciliation = () => {
                       <span className="font-bold text-brand-gold">{result.stats?.appliedReturnFeeRateDzd}</span>
                     </li>
                     <li className="flex justify-between">
+                      <span className="text-gray-400">اسم الورقة (Sheet):</span>
+                      <span className="text-white">{result.stats?.sheetName || '-'}</span>
+                    </li>
+                    <li className="flex justify-between">
                       <span className="text-gray-400">الرسالة:</span>
                       <span className="text-white">{result.message}</span>
                     </li>
                   </ul>
                 </div>
+
+                {/* Debug: Detected Columns */}
+                {result.stats?.detectedColumns && result.stats.detectedColumns.length > 0 && (
+                  <div className="bg-blue-900/20 border border-blue-600/30 rounded-lg p-5 mb-6">
+                    <h3 className="font-bold text-blue-400 border-b border-blue-700/50 pb-2 mb-3">
+                      🔍 أعمدة الإكسل المكتشفة ({result.stats.detectedColumns.length}):
+                    </h3>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {result.stats.detectedColumns.map((col, idx) => (
+                        <span key={idx} className="bg-blue-800/40 text-blue-200 px-3 py-1 rounded-full text-xs font-mono">{col}</span>
+                      ))}
+                    </div>
+                    {result.stats.sampleRow && (
+                      <div className="mt-3">
+                        <p className="text-gray-400 text-xs mb-2">أول سطر (Sample):</p>
+                        <pre className="bg-[#1a120f] text-gray-300 text-xs p-3 rounded overflow-x-auto" dir="ltr">
+                          {JSON.stringify(result.stats.sampleRow, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {result.stats?.errors && result.stats.errors.length > 0 && (
                   <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-5">
