@@ -1,13 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
 const xlsx = require('xlsx'); // تدعم قراءة CSV و Excel
 const ErpOrder = require('../models/ErpOrder');
 const Merchant = require('../models/Merchant');
 const DeliveryCompany = require('../models/DeliveryCompany'); // التحكم بأسعار الشركات والتاريخ
-
-// إعداد رفع الملف في الذاكرة (Memory Storage) 
-const upload = multer({ storage: multer.memoryStorage() });
 
 // دالة مساعدة لاصطياد سعر الشركة من إعداداتك الخاصة (أندرسون بـ 50، أو 100 حسب التاريخ)
 const getCompanyReturnFee = async (companyName, referenceDate = new Date()) => {
@@ -29,13 +25,15 @@ const getCompanyReturnFee = async (companyName, referenceDate = new Date()) => {
 };
 
 // مسار رفع وقراءة ملف الـ CSV/Excel لشركة التوصيل (ZR / Ecotrack / Anderson)
-router.post('/upload-reconciliation', upload.single('file'), async (req, res) => {
-  if (!req.file) {
+// نستخدم express-fileupload (المُفعّل عالمياً في index.js) بدلاً من multer لتجنب التعارض
+router.post('/upload-reconciliation', async (req, res) => {
+  if (!req.files || !req.files.file) {
     return res.status(400).json({ error: 'الرجاء إرفاق ملف CSV أو Excel' });
   }
 
   try {
-    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+    const uploadedFile = req.files.file;
+    const workbook = xlsx.read(uploadedFile.data, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
