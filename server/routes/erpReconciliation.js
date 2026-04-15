@@ -88,7 +88,7 @@ router.post('/upload-reconciliation', async (req, res) => {
     for (let row of data) {
       // ======================================================================
       // استخراج الأعمدة بشكل ذكي يدعم جميع شركات التوصيل
-      // Ecotrack: Tracking, montant, Frais de livraison, Type
+      // Ecotrack: Tracking, montant, Frais de livraison, Type, Téléphone
       // ZR: TrackingNumber, State.Name, DeliveryPrice, TotalAmount
       // Yalidine: Code d'envoi, Montant (DA)
       // ======================================================================
@@ -106,19 +106,58 @@ router.post('/upload-reconciliation', async (req, res) => {
       const prestationType = (row['Type de préstation'] || row['Type de prestation'] || '').toString().trim().toLowerCase();
       const stateName = (row['State.Name'] || row['Statut'] || row['statut'] || '').toString().trim().toLowerCase();
       
-      // المبلغ المحصّل (COD)
-      let totalAmount = parseFloat(row['montant'] || row['TotalAmount'] || row['Montant'] || row['Montant (DA)'] || 0);
+      // المبلغ المحصّل (COD) — تنظيف القيمة من الحروف الزائدة مثل "/" 
+      const rawMontant = (row['montant'] || row['TotalAmount'] || row['Montant'] || row['Montant (DA)'] || '0').toString().replace(/[^\d.]/g, '');
+      let totalAmount = parseFloat(rawMontant) || 0;
       
       // رسوم التوصيل
       let deliveryPrice = parseFloat(row['Frais de livraison'] || row['DeliveryPrice'] || row['Frais livraison'] || 0);
 
+      // رقم الهاتف من الإكسل (للمطابقة الذكية) — تنظيف من "/" والمسافات
+      const rawPhone = (
+        row['Téléphone'] || row['Telephone'] || 
+        row['Customer.Phone.Number1'] || row['phone'] || ''
+      ).toString().replace(/[\/\s-]/g, '').trim();
+      // تنظيف: إزالة البادئة الدولية +213 وتحويلها إلى 0 
+      const cleanPhone = rawPhone.replace(/^\+213/, '0').replace(/^213/, '0');
+
       if (!trackingNumber) continue;
 
-      // البحث عن الطلبية في قاعدة بياناتنا
-      const order = await ErpOrder.findOne({ trackingId: trackingNumber }).populate('merchantId');
+      // ======================================================================
+      // البحث الذكي: أولاً بالـ trackingId أو deliveryTrackingId، ثم بالهاتف (Fallback)
+      // ======================================================================
+      let order = await ErpOrder.findOne({
+        $or: [
+          { trackingId: trackingNumber },
+          { deliveryTrackingId: trackingNumber }
+        ]
+      }).populate('merchantId');
+      
+      let matchMethod = 'trackingId';
+      
+      // Fallback 1: البحث بالهاتف إذا لم يُعثر على الطلبية بالـ tracking
+      if (!order && cleanPhone && cleanPhone.length >= 9) {
+        // نبحث في حقل customerData.phone بعدة صيغ ممكنة
+        const phoneVariants = [
+          cleanPhone,
+          cleanPhone.replace(/^0/, '+213'),
+          cleanPhone.replace(/^0/, '213'),
+          cleanPhone.slice(-9) // آخر 9 أرقام
+        ];
+        
+        order = await ErpOrder.findOne({
+          $or: [
+            { 'customerData.phone': { $in: phoneVariants } },
+            { 'customerData.phone': { $regex: cleanPhone.slice(-9) + '$' } }
+          ],
+          status: { $in: ['shipped', 'pending', 'confirmed'] } // فقط الطلبيات المرسلة التي لم تُسوّى بعد
+        }).populate('merchantId');
+        
+        if (order) matchMethod = 'phone';
+      }
       
       if (!order) {
-        errors.push(`الطلبية ${trackingNumber} غير موجودة في النظام`);
+        errors.push(`الطلبية ${trackingNumber} (هاتف: ${rawPhone || 'غير متوفر'}) غير موجودة في النظام`);
         continue;
       }
 
@@ -193,16 +232,21 @@ router.post('/upload-reconciliation', async (req, res) => {
       }
 
       if (isModified) {
+        const updatePayload = {
+          status: order.status,
+          financials: order.financials,
+          deliveryCompany: companyName || '',
+          excelReconciliationDate: processingDate
+        };
+        
+        // إذا تم إيجاد الطلبية بالهاتف ورقم التتبع في الإكسل مختلف عن الأصلي، نحفظ رقم تتبع التوصيل
+        if (matchMethod === 'phone' && trackingNumber && trackingNumber !== order.trackingId) {
+          updatePayload.deliveryTrackingId = trackingNumber;
+        }
+
         await ErpOrder.updateOne(
           { _id: order._id },
-          { 
-            $set: {
-               status: order.status,
-               financials: order.financials,
-               deliveryCompany: companyName || '',
-               excelReconciliationDate: processingDate
-            }
-          }
+          { $set: updatePayload }
         );
         processedCount++;
         // تجميع الإحصائيات المالية
