@@ -411,4 +411,258 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// ========================================================
+// GET /api/erp/invoices/:id/pdf
+// توليد فاتورة PDF احترافية
+// ========================================================
+router.get('/:id/pdf', async (req, res) => {
+  try {
+    const PDFDocument = require('pdfkit');
+    
+    const invoice = await ErpInvoice.findById(req.params.id).populate('merchantId');
+    if (!invoice) {
+      return res.status(404).json({ error: 'الفاتورة غير موجودة' });
+    }
+
+    const merchant = invoice.merchantId;
+
+    // جلب الطلبيات المرتبطة بهذه الفاتورة
+    const deliveredOrders = await ErpOrder.find({
+      merchantId: merchant._id,
+      status: 'paid',
+      excelReconciliationDate: {
+        $gte: new Date(invoice.periodStart),
+        $lte: new Date(invoice.periodEnd)
+      }
+    }).sort({ excelReconciliationDate: 1 });
+
+    const returnedOrders = await ErpOrder.find({
+      merchantId: merchant._id,
+      status: 'returned',
+      excelReconciliationDate: {
+        $gte: new Date(invoice.periodStart),
+        $lte: new Date(invoice.periodEnd)
+      }
+    }).sort({ excelReconciliationDate: 1 });
+
+    // إنشاء PDF
+    const doc = new PDFDocument({ 
+      size: 'A4', 
+      margin: 40,
+      info: {
+        Title: `فاتورة - ${merchant.name}`,
+        Author: 'ERP Fulfillment Platform'
+      }
+    });
+
+    // إعداد Headers
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=invoice_${invoice.invoiceNumber || invoice._id}.pdf`);
+    doc.pipe(res);
+
+    // دالة تنسيق الأرقام
+    const fmt = (n) => Number(n || 0).toLocaleString('fr-DZ');
+
+    // ===== الغلاف =====
+    doc.rect(0, 0, 595, 120).fill('#1a1a2e');
+    doc.fontSize(28).fill('#e8b923').text('INVOICE / فاتورة تسوية', 40, 35);
+    doc.fontSize(10).fill('#888888').text(`Invoice #: ${invoice.invoiceNumber || invoice._id}`, 40, 75);
+    doc.text(`Date: ${new Date().toLocaleDateString('fr-DZ')}`, 40, 90);
+
+    // شعار / اسم الشركة
+    doc.fontSize(14).fill('#e8b923').text('ERP Fulfillment', 400, 40, { align: 'right', width: 155 });
+    doc.fontSize(9).fill('#888888').text('Algeria Delivery System', 400, 60, { align: 'right', width: 155 });
+
+    // ===== معلومات التاجر =====
+    doc.fill('#333333');
+    let y = 140;
+    doc.fontSize(12).fill('#1a1a2e').text('Merchant / التاجر:', 40, y);
+    doc.fontSize(14).fill('#000000').text(merchant.name || 'N/A', 40, y + 18);
+    
+    doc.fontSize(10).fill('#666666');
+    doc.text(`Period: ${new Date(invoice.periodStart).toLocaleDateString('fr-DZ')} → ${new Date(invoice.periodEnd).toLocaleDateString('fr-DZ')}`, 300, y, { align: 'right', width: 255 });
+    doc.text(`Status: ${invoice.status || 'draft'}`, 300, y + 16, { align: 'right', width: 255 });
+
+    // خط فاصل
+    y += 50;
+    doc.moveTo(40, y).lineTo(555, y).strokeColor('#e8b923').lineWidth(1).stroke();
+
+    // ===== ملخص الإحصائيات =====
+    y += 15;
+    doc.fontSize(13).fill('#1a1a2e').text('Summary / ملخص:', 40, y);
+    y += 22;
+    
+    const summary = invoice.summary || {};
+    const statsData = [
+      ['Delivered Orders / طلبيات مسلّمة', summary.totalDelivered || deliveredOrders.length],
+      ['Returned Orders / طلبيات مرتجعة', summary.totalReturned || returnedOrders.length],
+      ['Success Rate / نسبة النجاح', `${((summary.totalDelivered || deliveredOrders.length) / Math.max(1, (summary.totalDelivered || deliveredOrders.length) + (summary.totalReturned || returnedOrders.length)) * 100).toFixed(1)}%`],
+    ];
+
+    statsData.forEach(([label, value]) => {
+      doc.fontSize(10).fill('#555555').text(label, 60, y);
+      doc.fontSize(11).fill('#000000').text(String(value), 400, y, { align: 'right', width: 155 });
+      y += 18;
+    });
+
+    // ===== الملخص المالي =====
+    y += 10;
+    doc.moveTo(40, y).lineTo(555, y).strokeColor('#dddddd').lineWidth(0.5).stroke();
+    y += 15;
+    doc.fontSize(13).fill('#1a1a2e').text('Financial Summary / الملخص المالي:', 40, y);
+    y += 25;
+
+    const financialRows = [
+      ['إجمالي المبالغ المحصّلة / Total Collected', `${fmt(summary.totalCollectedAmount)} DA`, '#27ae60'],
+      ['(-) مصاريف التوصيل / Delivery Fees', `-${fmt(summary.totalDeliveryFees)} DA`, '#e74c3c'],
+      ['(-) رسوم المتابعة / Follow-up Fees', `-${fmt(summary.totalFollowUpFees)} DA`, '#e67e22'],
+      ['(-) غرامات المرتجعات / Return Penalties', `-${fmt(summary.totalReturnPenalties)} DA`, '#e74c3c'],
+      ['(-) مصاريف الإعلانات / Ad Spend', `-${fmt(summary.totalAdSpendDzd)} DA`, '#9b59b6'],
+      ['(-) مصاريف مشتركة / Shared Expenses', `-${fmt(summary.totalSharedExpensesForMerchant)} DA`, '#8e44ad'],
+    ];
+
+    financialRows.forEach(([label, value, color]) => {
+      doc.fontSize(10).fill('#444444').text(label, 60, y);
+      doc.fontSize(10).fill(color).text(value, 350, y, { align: 'right', width: 205 });
+      y += 20;
+    });
+
+    // الصافي
+    y += 5;
+    doc.rect(40, y, 515, 35).fill('#1a1a2e');
+    doc.fontSize(13).fill('#e8b923').text('✅ NET PAYOUT / الصافي المستحق للتاجر', 55, y + 8);
+    doc.fontSize(14).fill('#ffffff').text(`${fmt(summary.netPayoutToMerchant)} DA`, 350, y + 8, { align: 'right', width: 190 });
+
+    // ===== جدول الطلبيات المسلّمة =====
+    y += 55;
+    if (y > 650) { doc.addPage(); y = 40; }
+
+    doc.fontSize(12).fill('#27ae60').text(`Delivered Orders (${deliveredOrders.length}) / الطلبيات المسلّمة`, 40, y);
+    y += 20;
+
+    if (deliveredOrders.length > 0) {
+      // Header
+      doc.rect(40, y, 515, 18).fill('#f0f0f0');
+      doc.fontSize(8).fill('#333');
+      doc.text('#', 45, y + 4, { width: 25 });
+      doc.text('Tracking', 70, y + 4, { width: 120 });
+      doc.text('Customer', 190, y + 4, { width: 100 });
+      doc.text('Amount', 310, y + 4, { width: 70, align: 'right' });
+      doc.text('Del. Fee', 385, y + 4, { width: 60, align: 'right' });
+      doc.text('Follow-up', 450, y + 4, { width: 60, align: 'right' });
+      y += 20;
+
+      deliveredOrders.slice(0, 40).forEach((order, idx) => {
+        if (y > 750) { doc.addPage(); y = 40; }
+        const bg = idx % 2 === 0 ? '#ffffff' : '#fafafa';
+        doc.rect(40, y, 515, 16).fill(bg);
+        doc.fontSize(7).fill('#333');
+        doc.text(String(idx + 1), 45, y + 4, { width: 25 });
+        doc.text(order.deliveryTrackingId || order.trackingId || '', 70, y + 4, { width: 120 });
+        doc.text(order.customerData?.name || '', 190, y + 4, { width: 100 });
+        doc.fill('#27ae60').text(`${fmt(order.financials?.amountCollected)}`, 310, y + 4, { width: 70, align: 'right' });
+        doc.fill('#e74c3c').text(`${fmt(order.financials?.deliveryFee)}`, 385, y + 4, { width: 60, align: 'right' });
+        doc.fill('#e67e22').text(`${fmt(order.financials?.followUpFeeApplied)}`, 450, y + 4, { width: 60, align: 'right' });
+        y += 16;
+      });
+      if (deliveredOrders.length > 40) {
+        doc.fontSize(8).fill('#999').text(`... + ${deliveredOrders.length - 40} more orders`, 40, y + 5);
+        y += 20;
+      }
+    }
+
+    // ===== جدول المرتجعات =====
+    y += 15;
+    if (y > 650) { doc.addPage(); y = 40; }
+
+    doc.fontSize(12).fill('#e74c3c').text(`Returned Orders (${returnedOrders.length}) / الطلبيات المرتجعة`, 40, y);
+    y += 20;
+
+    if (returnedOrders.length > 0) {
+      doc.rect(40, y, 515, 18).fill('#f0f0f0');
+      doc.fontSize(8).fill('#333');
+      doc.text('#', 45, y + 4, { width: 25 });
+      doc.text('Tracking', 70, y + 4, { width: 130 });
+      doc.text('Customer', 200, y + 4, { width: 120 });
+      doc.text('Penalty', 380, y + 4, { width: 80, align: 'right' });
+      doc.text('Follow-up', 460, y + 4, { width: 60, align: 'right' });
+      y += 20;
+
+      returnedOrders.slice(0, 30).forEach((order, idx) => {
+        if (y > 750) { doc.addPage(); y = 40; }
+        const bg = idx % 2 === 0 ? '#ffffff' : '#fafafa';
+        doc.rect(40, y, 515, 16).fill(bg);
+        doc.fontSize(7).fill('#333');
+        doc.text(String(idx + 1), 45, y + 4, { width: 25 });
+        doc.text(order.deliveryTrackingId || order.trackingId || '', 70, y + 4, { width: 130 });
+        doc.text(order.customerData?.name || '', 200, y + 4, { width: 120 });
+        doc.fill('#e74c3c').text(`${fmt(order.financials?.returnedPenaltyFee)}`, 380, y + 4, { width: 80, align: 'right' });
+        doc.fill('#e67e22').text(`${fmt(order.financials?.followUpFeeApplied)}`, 460, y + 4, { width: 60, align: 'right' });
+        y += 16;
+      });
+    }
+
+    // ===== Footer =====
+    y += 30;
+    if (y > 700) { doc.addPage(); y = 40; }
+    doc.moveTo(40, y).lineTo(555, y).strokeColor('#dddddd').lineWidth(0.5).stroke();
+    y += 10;
+    doc.fontSize(8).fill('#999999').text(`Generated: ${new Date().toLocaleString('fr-DZ')} | ERP Fulfillment Platform`, 40, y);
+    doc.text('This is an auto-generated document.', 40, y + 12);
+
+    doc.end();
+  } catch (error) {
+    console.error('PDF Generation Error:', error);
+    res.status(500).json({ error: 'فشل توليد الفاتورة PDF', details: error.message });
+  }
+});
+
+// ========================================================
+// GET /api/erp/invoices/:id/data
+// جلب بيانات الفاتورة كاملة (للواجهة HTML القابلة للطباعة)
+// ========================================================
+router.get('/:id/data', async (req, res) => {
+  try {
+    const invoice = await ErpInvoice.findById(req.params.id).populate('merchantId');
+    if (!invoice) {
+      return res.status(404).json({ error: 'الفاتورة غير موجودة' });
+    }
+
+    const merchant = invoice.merchantId;
+
+    // جلب الطلبيات
+    const deliveredOrders = await ErpOrder.find({
+      merchantId: merchant._id,
+      status: 'paid',
+      excelReconciliationDate: {
+        $gte: new Date(invoice.periodStart),
+        $lte: new Date(invoice.periodEnd)
+      }
+    }).sort({ excelReconciliationDate: 1 }).lean();
+
+    const returnedOrders = await ErpOrder.find({
+      merchantId: merchant._id,
+      status: 'returned',
+      excelReconciliationDate: {
+        $gte: new Date(invoice.periodStart),
+        $lte: new Date(invoice.periodEnd)
+      }
+    }).sort({ excelReconciliationDate: 1 }).lean();
+
+    res.json({
+      invoice,
+      merchant: {
+        _id: merchant._id,
+        name: merchant.name,
+        storeName: merchant.storeName
+      },
+      deliveredOrders,
+      returnedOrders
+    });
+  } catch (error) {
+    console.error('Fetch Invoice Data Error:', error);
+    res.status(500).json({ error: 'فشل جلب بيانات الفاتورة', details: error.message });
+  }
+});
+
 module.exports = router;

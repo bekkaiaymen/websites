@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, RefreshCw, Plus, Eye, Calendar, DollarSign, TrendingUp, AlertCircle, Search, Filter } from 'lucide-react';
+import { FileText, Download, RefreshCw, Plus, Eye, Calendar, DollarSign, TrendingUp, AlertCircle, Search, Filter, Printer } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AdminNavbar from '../components/AdminNavbar';
+import InvoicePrintView from '../components/InvoicePrintView';
 
 const AdminInvoices = () => {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ const AdminInvoices = () => {
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [printViewInvoiceId, setPrintViewInvoiceId] = useState(null);
   
   // Generation Form
   const [generateForm, setGenerateForm] = useState({
@@ -282,6 +284,20 @@ const AdminInvoices = () => {
                           >
                             <Download className="w-4 h-4" />
                           </button>
+                          <button
+                            onClick={() => window.open(`${apiUrl}/api/erp/invoices/${invoice._id}/pdf`, '_blank')}
+                            className="p-2 hover:bg-red-600/30 text-red-400 rounded transition-colors"
+                            title="تحميل PDF"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setPrintViewInvoiceId(invoice._id)}
+                            className="p-2 hover:bg-purple-600/30 text-purple-400 rounded transition-colors"
+                            title="طباعة"
+                          >
+                            <Printer className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                       <td className="p-4 font-bold text-green-400">{(invoice.summary?.totalOwedDzd || 0).toLocaleString('ar-DZ')} د.ج</td>
@@ -422,6 +438,15 @@ const AdminInvoices = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Print View Modal */}
+      {printViewInvoiceId && (
+        <InvoicePrintView
+          invoiceId={printViewInvoiceId}
+          adminToken={token}
+          onClose={() => setPrintViewInvoiceId(null)}
+        />
       )}
     </div>
   );

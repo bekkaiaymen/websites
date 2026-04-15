@@ -102,13 +102,12 @@ router.get('/export', async (req, res) => {
         }
 
         // Get wilaya info
-        let rawWilaya = order.customerData?.wilaya || order.wilayaName || '';
-        let commune = order.state || order.commune || order.customerData?.state || order.customerData?.commune || '';
+        let rawWilaya = order.customerData?.wilaya || '';
+        let commune = order.customerData?.commune || '';
         
+        // إذا البلدية فارغة، نحاول استخراجها من العنوان (لكن لا نضع اسم الولاية)
         if (!commune && addressStr.includes(',')) {
           commune = addressStr.split(',')[0].trim();
-        } else if (!commune) {
-          commune = rawWilaya;
         }
 
         // Map wilaya code using communesMap - BULLETPROOF
@@ -161,7 +160,7 @@ router.get('/export', async (req, res) => {
         // Build row object with EXACT keys matching worksheet.columns
         // NOTE: trackingId is left empty as per Ecotrack spec
         const rowData = {
-          trackingId: '',
+          trackingId: order.trackingId || '',  // ✅ نُرسل مرجعنا للمطابقة عند الاستيراد
           customerName: customerName,
           phone1: rawPhone,
           phone2: order.customerData?.phone2 || '',
@@ -241,219 +240,371 @@ router.get('/export', async (req, res) => {
 /**
  * POST /api/erp/ecotrack/import
  * 
- * Imports reconciliation data from Ecotrack
- * Accepts Excel/CSV files with:
- * - Tracking Number
- * - Frais de livraison (Delivery Fee)
- * - Montant (Total Amount)
- * - Status (Delivered/Returned)
- * 
- * Updates order status and merchant balance
+ * محرك استيراد ذكي يدعم ملفات Ecotrack و ZR
+ * يكتشف تلقائياً نوع الملف والأعمدة
+ * يحسب المالية بدقة حسب مصدر الطلبية ونوع التاجر
+ * يُنتج ملخصاً مالياً لكل تاجر
  */
+
+// دالة تنظيف الأرقام (إزالة / و , والمسافات)
+function cleanNumber(val) {
+  if (val === null || val === undefined) return 0;
+  const str = String(val).replace(/[\/,\s]/g, '').trim();
+  return parseFloat(str) || 0;
+}
+
+// دالة تنظيف الهاتف (تحويل الصيغة الدولية 213xxx إلى 0xxx)
+function cleanPhone(phone) {
+  if (!phone) return '';
+  let p = String(phone).replace(/[\/\s\-]/g, '').trim();
+  // تحويل 213xxxxxxxxx إلى 0xxxxxxxxx
+  if (p.startsWith('213') && p.length >= 12) {
+    p = '0' + p.substring(3);
+  }
+  return p;
+}
+
+// دالة كشف نوع الملف تلقائياً
+function detectFileFormat(headers) {
+  const headerStr = headers.join(',').toLowerCase();
+  
+  if (headerStr.includes('trackingnumber') && headerStr.includes('state.name')) {
+    return 'zr'; // ملف ZR (CSV)
+  }
+  if (headerStr.includes('tracking') && (headerStr.includes('réference') || headerStr.includes('déstinataire'))) {
+    return 'ecotrack'; // ملف Ecotrack (XLSX)
+  }
+  if (headerStr.includes('reference commande') || headerStr.includes('montant du colis')) {
+    return 'ecotrack_upload'; // ملف رفع Ecotrack (ليس تسوية)
+  }
+  return 'unknown';
+}
+
+// دالة استخراج البيانات حسب نوع الملف
+function extractRecordData(record, format) {
+  if (format === 'zr') {
+    const stateName = (record['State.Name'] || '').toLowerCase().trim();
+    return {
+      deliveryTrackingId: record['TrackingNumber'] || '',
+      reference: record['ExternalId'] || '',
+      customerName: record['Customer.Name'] || '',
+      phone: cleanPhone(record['Customer.Phone.Number1']),
+      commune: record['DeliveryAddress.District'] || record['DeliveryAddress.City'] || '',
+      wilaya: record['DeliveryAddress.City'] || '',
+      totalAmount: cleanNumber(record['TotalAmount']),
+      netAmount: cleanNumber(record['Amount']),
+      deliveryFee: cleanNumber(record['DeliveryPrice']),
+      // recouvert = تم التوصيل والدفع
+      isDelivered: stateName === 'recouvert',
+      // recupere_par_fournisseur = مرتجع للمورد
+      isReturned: stateName === 'recupere_par_fournisseur',
+      // dispatch = في الطريق (نتجاهله)
+      isSkippable: stateName === 'dispatch' || stateName === 'en cours' || stateName === 'en attente',
+      rawStatus: stateName,
+      deliveryType: record['DeliveryType'] || '',
+    };
+  }
+  
+  if (format === 'ecotrack') {
+    return {
+      deliveryTrackingId: record['Tracking'] || '',
+      reference: record['Réference'] || record['Reference'] || '',
+      customerName: record['déstinataire'] || record['Déstinataire'] || '',
+      phone: cleanPhone(record['Téléphone'] || record['Telephone']),
+      commune: record['Commune'] || '',
+      wilaya: record['Wilaya'] || '',
+      totalAmount: cleanNumber(record['montant'] || record['Montant']),
+      deliveryFee: cleanNumber(record['Frais de livraison']),
+      netAmount: cleanNumber(record['à recouvrir']),
+      totalServiceFees: cleanNumber(record['Total frais de service']),
+      // الملف يأتي منفصلاً: ملف Paiements = مدفوع، ملف Retours = مرتجع
+      // نكتشف من الأعمدة الموجودة
+      isDelivered: record.hasOwnProperty('Livré le') || record.hasOwnProperty('Encaissé le'),
+      isReturned: record.hasOwnProperty('Retour demandé le') || record.hasOwnProperty('Retour transmis le') || record.hasOwnProperty('Retour validé le'),
+      isSkippable: false,
+      rawStatus: record.hasOwnProperty('Retour validé le') ? 'retour' : 'paiement',
+      deliveryType: record['Type de préstation'] || record['Type prestation'] || '',
+    };
+  }
+  
+  return null;
+}
+
 router.post('/import', async (req, res) => {
   try {
-    console.log('📥 Starting Ecotrack import...');
+    console.log('📥 بدء استيراد ملف التسوية...');
 
     if (!req.files || !req.files.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+      return res.status(400).json({ error: 'الرجاء إرفاق ملف CSV أو Excel' });
     }
 
     const uploadedFile = req.files.file;
     const filename = uploadedFile.name;
     const ext = path.extname(filename).toLowerCase();
+    
+    // اسم شركة التوصيل وتاريخ التسوية من الواجهة
+    const companyName = req.body?.companyName || 'unknown';
+    const reconciliationDate = req.body?.reconciliationDate 
+      ? new Date(req.body.reconciliationDate) 
+      : new Date();
 
-    // Parse Excel/CSV file
-    let workbook;
+    // قراءة الملف
     let sheetData = [];
+    let rawHeaders = [];
 
     if (ext === '.xlsx' || ext === '.xls') {
-      // Parse Excel
-      workbook = XLSX.read(uploadedFile.data);
+      const workbook = XLSX.read(uploadedFile.data);
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
-      sheetData = XLSX.utils.sheet_to_json(sheet);
+      // اقرأ كل الصفوف بما في ذلك الصف الأول (قد يكون عنوان وليس أعمدة)
+      const allRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      
+      // Ecotrack يضع عنوان في الصف الأول والأعمدة في الصف الثاني
+      if (allRows.length > 1 && allRows[0].length <= 2 && allRows[1].length > 5) {
+        rawHeaders = allRows[1].map(h => String(h || ''));
+        sheetData = XLSX.utils.sheet_to_json(sheet, { header: rawHeaders, range: 2 });
+      } else {
+        rawHeaders = allRows[0].map(h => String(h || ''));
+        sheetData = XLSX.utils.sheet_to_json(sheet);
+      }
     } else if (ext === '.csv') {
-      // Parse CSV
       const csvText = uploadedFile.data.toString('utf-8');
-      workbook = XLSX.read(csvText, { type: 'string' });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
+      const workbook = XLSX.read(csvText, { type: 'string' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
       sheetData = XLSX.utils.sheet_to_json(sheet);
+      const allRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      rawHeaders = allRows[0] ? allRows[0].map(h => String(h || '')) : [];
     } else {
-      return res.status(400).json({ error: 'Only Excel (.xlsx, .xls) and CSV files are supported' });
+      return res.status(400).json({ error: 'يُقبل فقط ملفات Excel (.xlsx, .xls) و CSV' });
     }
 
-    console.log(`📊 Parsed ${sheetData.length} records from file`);
+    // كشف نوع الملف
+    const fileFormat = detectFileFormat(rawHeaders);
+    console.log(`📁 نوع الملف المكتشف: ${fileFormat} | الشركة: ${companyName}`);
+    console.log(`📊 عدد الصفوف: ${sheetData.length} | الأعمدة: ${rawHeaders.length}`);
+    
+    if (fileFormat === 'unknown' || fileFormat === 'ecotrack_upload') {
+      return res.status(400).json({ 
+        error: 'هذا الملف ليس ملف تسوية. يرجى رفع ملف Paiements أو Retours أو Supplier.Parcels',
+        detectedFormat: fileFormat,
+        headers: rawHeaders.slice(0, 10)
+      });
+    }
 
-    // Process each record
+    // النتائج
     const results = {
       processed: 0,
       delivered: 0,
       returned: 0,
+      skipped: 0,
       errors: [],
-      updated: []
+      updated: [],
+      perMerchant: {} // ملخص مالي لكل تاجر
     };
 
-    for (const record of sheetData) {
+    // معالجة كل سطر
+    for (let i = 0; i < sheetData.length; i++) {
+      const record = sheetData[i];
+      
       try {
-        // Extract data - handle different column names
-        const trackingNumber = record['Reference Commande'] || 
-                              record['Tracking Number'] || 
-                              record['tracking'] || 
-                              record['N°'] ||
-                              record['#'];
-
-        const deliveryFee = parseFloat(record['Frais de livraison'] || 
-                                       record['DeliveryPrice'] || 
-                                       record['frais'] || 0);
-
-        const totalAmount = parseFloat(record['Montant'] || 
-                                      record['TotalAmount'] || 
-                                      record['montant'] || 0);
-
-        const status = record['Statut'] || 
-                      record['Status'] || 
-                      record['status'] || 'delivered';
-
-        // Skip if no tracking number
-        if (!trackingNumber) {
-          results.errors.push({ row: sheetData.indexOf(record), error: 'No tracking number' });
+        const data = extractRecordData(record, fileFormat);
+        if (!data) {
+          results.errors.push({ row: i + 1, error: 'لم يتم التعرف على بنية السطر' });
           continue;
         }
 
-        console.log(`\n🔍 Processing: ${trackingNumber} | Status: ${status} | Amount: ${totalAmount}`);
+        // تجاهل الطلبيات في الطريق (dispatch)
+        if (data.isSkippable) {
+          results.skipped++;
+          console.log(`⏭️  تخطي: ${data.deliveryTrackingId} (${data.rawStatus})`);
+          continue;
+        }
 
-        // Find order by tracking ID
-        const order = await ErpOrder.findOne({
-          trackingId: trackingNumber.toString().trim()
-        }).populate('merchantId');
+        // لا مسلّم ولا مرتجع → تجاهل
+        if (!data.isDelivered && !data.isReturned) {
+          results.skipped++;
+          console.log(`⏭️  تخطي (حالة غير معروفة): ${data.deliveryTrackingId} (${data.rawStatus})`);
+          continue;
+        }
+
+        // ===== البحث عن الطلبية في قاعدة البيانات =====
+        let order = null;
+
+        // محاولة 1: البحث بالمرجع (reference = trackingId)
+        if (data.reference && data.reference.trim()) {
+          order = await ErpOrder.findOne({ trackingId: data.reference.trim() }).populate('merchantId');
+        }
+
+        // محاولة 2: البحث برقم تتبع شركة التوصيل (ربما سبق استيراده)
+        if (!order && data.deliveryTrackingId) {
+          order = await ErpOrder.findOne({ deliveryTrackingId: data.deliveryTrackingId }).populate('merchantId');
+        }
+
+        // محاولة 3: البحث بالهاتف + المبلغ (بديل ذكي)
+        if (!order && data.phone && data.totalAmount > 0) {
+          const phoneVariants = [data.phone];
+          // إضافة تنسيقات بديلة للهاتف
+          if (data.phone.startsWith('0')) {
+            phoneVariants.push('213' + data.phone.substring(1));
+            phoneVariants.push('+213' + data.phone.substring(1));
+          }
+          
+          order = await ErpOrder.findOne({
+            'customerData.phone': { $in: phoneVariants },
+            totalAmountDzd: data.totalAmount,
+            status: { $nin: ['paid', 'returned'] } // فقط الطلبيات غير المُسوّاة
+          }).populate('merchantId');
+          
+          if (order) {
+            console.log(`   🔎 تمت المطابقة بالهاتف+المبلغ: ${data.phone} / ${data.totalAmount}`);
+          }
+        }
 
         if (!order) {
           results.errors.push({ 
-            tracking: trackingNumber, 
-            error: 'Order not found' 
+            row: i + 1,
+            tracking: data.deliveryTrackingId,
+            customerName: data.customerName,
+            phone: data.phone,
+            error: 'الطلبية غير موجودة في النظام' 
           });
-          console.log(`⚠️  Order not found: ${trackingNumber}`);
           continue;
         }
 
-        // ========== DELIVERED ORDERS ==========
-        if (status.toLowerCase().includes('deliver') || 
-            status.toLowerCase().includes('paid') || 
-            status.toLowerCase().includes('encaissé')) {
+        // ===== منع التكرار =====
+        if (order.status === 'paid' || order.status === 'returned') {
+          results.skipped++;
+          console.log(`⏭️  سبق تسويتها: ${order.trackingId} (${order.status})`);
+          continue;
+        }
+
+        const merchant = order.merchantId;
+        if (!merchant) {
+          results.errors.push({ row: i + 1, tracking: data.deliveryTrackingId, error: 'التاجر غير موجود' });
+          continue;
+        }
+
+        // تهيئة ملخص التاجر
+        const mId = merchant._id.toString();
+        if (!results.perMerchant[mId]) {
+          results.perMerchant[mId] = {
+            merchantName: merchant.name,
+            merchantId: mId,
+            delivered: 0,
+            returned: 0,
+            totalCollected: 0,
+            totalDeliveryFees: 0,
+            totalFollowUpFees: 0,
+            totalReturnPenalties: 0,
+            netOwed: 0
+          };
+        }
+
+        // ===== طلبية مدفوعة (Delivered/Paid) =====
+        if (data.isDelivered) {
+          order.status = 'paid';
+          order.financials.amountCollected = data.totalAmount;
+          order.financials.deliveryFee = data.deliveryFee;
           
-          console.log(`✅ Marking as DELIVERED: ${trackingNumber}`);
+          // حق المتابعة حسب مصدر الطلبية
+          const fee = order.source === 'shopify' 
+            ? (merchant.financialSettings?.followUpFeeSuccessSpfy || 180)
+            : (merchant.financialSettings?.followUpFeeSuccessPage || 200);
+          order.financials.followUpFeeApplied = fee;
 
-          // Update order status
-          order.status = 'delivered';
-          order.financials.deliveryFee = deliveryFee;
-          order.financials.amountCollected = totalAmount;
-          order.excelReconciliationDate = new Date();
-          await order.save();
-
-          // Add delivery fee to merchant's balance (credit)
-          if (deliveryFee > 0) {
-            const walletTx = new WalletTransaction({
-              type: 'topup',
-              amountUsd: deliveryFee / 330, // Convert to USD using standard rate
-              exchangeRateDzd: 330,
-              billingRateDzd: 330,
-              merchantId: order.merchantId._id,
-              description: `Delivery Fee - Order ${trackingNumber}`,
-              date: new Date()
-            });
-            await walletTx.save();
-            console.log(`💰 Added delivery fee: ${deliveryFee} DZD`);
-          }
-
-          // Add collected amount to merchant transactions
-          if (totalAmount > 0) {
-            const collectedTx = new WalletTransaction({
-              type: 'topup',
-              amountUsd: totalAmount / 330,
-              exchangeRateDzd: 330,
-              billingRateDzd: 330,
-              merchantId: order.merchantId._id,
-              description: `Order Collection - Order ${trackingNumber}`,
-              date: new Date()
-            });
-            await collectedTx.save();
-            console.log(`💵 Amount collected: ${totalAmount} DZD`);
-          }
+          // تحديث ملخص التاجر
+          results.perMerchant[mId].delivered++;
+          results.perMerchant[mId].totalCollected += data.totalAmount;
+          results.perMerchant[mId].totalDeliveryFees += data.deliveryFee;
+          results.perMerchant[mId].totalFollowUpFees += fee;
 
           results.delivered++;
+          console.log(`✅ مدفوعة: ${data.deliveryTrackingId} → ${data.totalAmount} د.ج (رسم متابعة: ${fee})`);
         }
-        // ========== RETURNED ORDERS ==========
-        else if (status.toLowerCase().includes('return') || 
-                 status.toLowerCase().includes('retour')) {
-          
-          console.log(`🔄 Marking as RETURNED: ${trackingNumber}`);
-
-          // Update order status
+        // ===== طلبية مرتجعة (Returned) =====
+        else if (data.isReturned) {
           order.status = 'returned';
-          order.excelReconciliationDate = new Date();
+          
+          // غرامة المرتجع: من إعدادات التاجر الافتراضية
+          const returnPenalty = merchant.financialSettings?.defaultReturnDeliveryFee || 200;
+          order.financials.returnedPenaltyFee = returnPenalty;
+          
+          // حق متابعة المرتجعات
+          const returnFollowUp = merchant.financialSettings?.followUpFeeReturn || 0;
+          order.financials.followUpFeeApplied = returnFollowUp;
 
-          // Get merchant's default return fee
-          const merchant = order.merchantId;
-          const returnFee = merchant?.financialSettings?.defaultReturnDeliveryFee || 200;
-          order.financials.returnedPenaltyFee = returnFee;
-          await order.save();
-
-          // Deduct return fee from merchant's balance
-          const returnTx = new WalletTransaction({
-            type: 'spend',
-            amountUsd: returnFee / 330,
-            exchangeRateDzd: 330,
-            billingRateDzd: 330,
-            merchantId: order.merchantId._id,
-            description: `Return Penalty - Order ${trackingNumber}`,
-            date: new Date()
-          });
-          await returnTx.save();
-          console.log(`🔴 Return penalty deducted: ${returnFee} DZD`);
+          // تحديث ملخص التاجر
+          results.perMerchant[mId].returned++;
+          results.perMerchant[mId].totalReturnPenalties += returnPenalty;
+          results.perMerchant[mId].totalFollowUpFees += returnFollowUp;
 
           results.returned++;
+          console.log(`🔄 مرتجعة: ${data.deliveryTrackingId} (غرامة: ${returnPenalty} د.ج، متابعة: ${returnFollowUp} د.ج)`);
         }
 
-        results.updated.push({
-          trackingNumber,
-          status: order.status,
-          merchant: order.merchantId?.name
-        });
+        // حفظ رقم تتبع شركة التوصيل + اسم الشركة + تاريخ التسوية
+        order.deliveryTrackingId = data.deliveryTrackingId;
+        order.deliveryCompany = companyName;
+        order.excelReconciliationDate = reconciliationDate;
+        await order.save();
 
+        results.updated.push({
+          trackingNumber: order.trackingId,
+          deliveryTracking: data.deliveryTrackingId,
+          customerName: data.customerName,
+          status: order.status,
+          amount: data.totalAmount,
+          merchant: merchant.name
+        });
         results.processed++;
 
       } catch (recordError) {
-        console.error(`Error processing record:`, recordError.message);
-        results.errors.push({
-          tracking: record['Reference Commande'] || 'Unknown',
-          error: recordError.message
-        });
+        console.error(`❌ خطأ في السطر ${i + 1}:`, recordError.message);
+        results.errors.push({ row: i + 1, error: recordError.message });
       }
     }
 
-    console.log(`\n📋 Import Summary:`);
-    console.log(`   Processed: ${results.processed}`);
-    console.log(`   Delivered: ${results.delivered}`);
-    console.log(`   Returned: ${results.returned}`);
-    console.log(`   Errors: ${results.errors.length}`);
+    // حساب الصافي لكل تاجر
+    Object.values(results.perMerchant).forEach(m => {
+      m.netOwed = m.totalCollected - m.totalDeliveryFees - m.totalFollowUpFees - m.totalReturnPenalties;
+    });
+
+    console.log(`\n📋 ملخص الاستيراد:`);
+    console.log(`   الملف: ${filename} (${fileFormat})`);
+    console.log(`   معالَج: ${results.processed} | مسلّم: ${results.delivered} | مرتجع: ${results.returned}`);
+    console.log(`   متخطّى: ${results.skipped} | أخطاء: ${results.errors.length}`);
 
     res.json({
       success: true,
-      message: `Import completed: ${results.processed} orders processed`,
-      summary: {
-        totalRecords: sheetData.length,
+      message: `تمت معالجة ${results.processed} طلبية بنجاح`,
+      fileInfo: {
+        filename,
+        format: fileFormat,
+        company: companyName,
+        reconciliationDate: reconciliationDate.toISOString(),
+        headers: rawHeaders
+      },
+      stats: {
+        totalRows: sheetData.length,
         processed: results.processed,
         delivered: results.delivered,
         returned: results.returned,
-        errors: results.errors.length
+        skipped: results.skipped,
+        errorsCount: results.errors.length
+      },
+      financialSummary: {
+        totalCollected: Object.values(results.perMerchant).reduce((s, m) => s + m.totalCollected, 0),
+        totalDeliveryFees: Object.values(results.perMerchant).reduce((s, m) => s + m.totalDeliveryFees, 0),
+        totalFollowUpFees: Object.values(results.perMerchant).reduce((s, m) => s + m.totalFollowUpFees, 0),
+        totalReturnPenalties: Object.values(results.perMerchant).reduce((s, m) => s + m.totalReturnPenalties, 0),
+        perMerchant: Object.values(results.perMerchant)
       },
       updated: results.updated,
       errors: results.errors
     });
   } catch (error) {
-    console.error('❌ Import error:', error);
-    res.status(500).json({ error: error.message || 'Import failed' });
+    console.error('❌ خطأ في الاستيراد:', error);
+    res.status(500).json({ error: error.message || 'فشل الاستيراد' });
   }
 });
 
