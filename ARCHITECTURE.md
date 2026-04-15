@@ -1,276 +1,54 @@
-# 🏗️ MERCHANT PORTAL - ARCHITECTURE OVERVIEW
+# E-Commerce Fulfillment & ERP Platform (Algeria)
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    MERCHANT PORTAL SYSTEM                  │
-│                                                             │
-│  ┌──────────────────┐          ┌──────────────────┐       │
-│  │  MERCHANT (Web)  │          │  MERCHANT (Mobile)│      │
-│  └────────┬─────────┘          └────────┬─────────┘       │
-│           │                             │                  │
-│           └─────────────────┬───────────┘                  │
-│                             │                              │
-│                    ┌────────▼────────┐                     │
-│                    │ MERCHANT LOGIN  │                     │
-│                    │ /merchant/login │                     │
-│                    └────────┬────────┘                     │
-│                             │                              │
-│                    ┌────────▼──────────────┐               │
-│                    │  JWT TOKEN GENERATION │               │
-│                    │  30-day expiration    │               │
-│                    │  type: 'merchant'     │               │
-│                    └────────┬──────────────┘               │
-│                             │                              │
-│          ┌──────────────────┼──────────────────┐          │
-│          │                  │                  │          │
-│    ┌─────▼────┐      ┌─────▼─────┐     ┌─────▼────┐    │
-│    │ Dashboard│      │ Orders    │     │ Wallet   │    │
-│    └──────────┘      └───────────┘     └──────────┘    │
-│          │                  │                  │          │
-│    ┌─────▼────┐      ┌─────▼─────┐     ┌─────▼────┐    │
-│    │ Invoices │      │ Settings  │     │ Profile  │    │
-│    └──────────┘      └───────────┘     └──────────┘    │
-│                                                         │
-│          All routes pass through ProtectedRoute        │
-│          Authorization: Bearer {token}                 │
-│                                                         │
-└─────────────────────────────────────────────────────────────┘
+الهدف الأساسي للمشروع: بناء نظام (ERP) متكامل لإدارة اللوجستيات (Fulfillment) يربط بين أصحاب المتاجر (Merchants) و شركات التوصيل (Delivery Companies مثل Ecotrack و Yalidine) في الجزائر، مع إدارة كاملة للعمليات المالية وتسوية الحسابات.
 
-                           │
-                           ▼
+## 1. هيكل النظام (System Architecture)
+النظام ينقسم إلى واجهتين ومحرك خلفي:
 
-┌─────────────────────────────────────────────────────────────┐
-│                     BACKEND (Node.js/Express)              │
-│                                                             │
-│  Authentication Layer:                                      │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ POST /api/merchant/auth/login                       │   │
-│  │ POST /api/merchant/auth/:id/setup-password (admin)  │   │
-│  │ Middleware: authenticateMerchant                    │   │
-│  │ - Verify JWT token                                  │   │
-│  │ - Check token.type === 'merchant'                   │   │
-│  │ - Reject if invalid                                 │   │
-│  └─────────────────────────────────────────────────────┘   │
-│                                                             │
-│  Dashboard Layer (Data Filtering):                         │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ GET /api/merchant/dashboard                         │   │
-│  │   WHERE merchantId === req.merchant.id              │   │
-│  │   Filter: ✗ exchangeRateDzd (251)                   │   │
-│  │           ✗ followUpFees (180/200)                 │   │
-│  │           ✓ adRateDzd (330)                         │   │
-│  │                                                     │   │
-│  │ GET /api/merchant/orders                            │   │
-│  │   WHERE merchantId === req.merchant.id              │   │
-│  │                                                     │   │
-│  │ GET /api/merchant/wallet-history                    │   │
-│  │   WHERE merchantId === req.merchant.id              │   │
-│  │   Calculate: USD × merchant.rate (330)              │   │
-│  │                                                     │   │
-│  │ GET /api/merchant/invoices                          │   │
-│  │   WHERE merchantId === req.merchant.id              │   │
-│  │   Hide: Individual fees, cost breakdown             │   │
-│  └─────────────────────────────────────────────────────┘   │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+- **موقع التاجر (Shopify / Storefront)**: المتجر الذي يشتري منه الزبون.
+- **واجهة التاجر في الـ ERP (Merchant Portal)**: لوحة تحكم يدخل إليها صاحب المتجر ليرى مبيعاته، طلبياته، أرباحه، وحساباته المالية بشفافية تامة.
+- **واجهة مدير الفلفيلمنت (Admin Portal)**: لوحة التحكم الخاصة بك (كمركز لوجستي). من هنا تدير طلبات كل التجار، تؤكدها، ترسلها لشركات التوصيل، وتدير الحسابات.
+- **الخادم (Backend - Node.js/MongoDB)**: المحرك الذي يستقبل البيانات، يعالجها، ويحفظها (قاعدة البيانات تحتوي على موديلات: ErpOrder, Merchant, ErpExpense وغيرها).
 
-                           │
-                           ▼
+## 2. دورة حياة الطلبية (Order Lifecycle & Workflows)
 
-┌─────────────────────────────────────────────────────────────┐
-│                  DATABASE (MongoDB)                         │
-│                                                             │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ Merchant Collection                                │   │
-│  │ ─────────────────────────────────────────────────── │   │
-│  │ • _id (ObjectId)                                    │   │
-│  │ • name (String)                   ← Visible        │   │
-│  │ • email (String)                  ← Visible        │   │
-│  │ • password (String)               ← Protected      │   │
-│  │ • financialSettings:                              │   │
-│  │   - adSaleCostDzd: 330            ← Visible       │   │
-│  │   - followUpFeeSuccessSpfy: 180   ✗ HIDDEN        │   │
-│  │   - followUpFeeSuccessPage: 200   ✗ HIDDEN        │   │
-│  │   - followUpFeeReturn: 100        ✗ HIDDEN        │   │
-│  │ • status (enum)                   ← Admin only     │   │
-│  │ • createdAt, updatedAt            ← Visible       │   │
-│  └─────────────────────────────────────────────────────┘   │
-│                                                             │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ WalletTransaction Collection                       │   │
-│  │ ─────────────────────────────────────────────────── │   │
-│  │ • type: 'topup' | 'spend'                          │   │
-│  │ • amountUsd                                        │   │
-│  │ • exchangeRateDzd: 251            ✗ NOT SHOWN     │   │
-│  │ • billingRateDzd: 330             ← Merchant view │   │
-│  │ • merchantId                      (filtering key)  │   │
-│  │ • date                                             │   │
-│  └─────────────────────────────────────────────────────┘   │
-│                                                             │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ ErpInvoice Collection                              │   │
-│  │ ─────────────────────────────────────────────────── │   │
-│  │ • merchantId                      (filtering key)  │   │
-│  │ • periodStartDate, periodEndDate                   │   │
-│  │ • summary.totalOwedDzd            ← Shown         │   │
-│  │ • summary.adSpendDzd              ← Shown         │   │
-│  │ • orderDetails[].followUpFee      ✗ NOT SHOWN    │   │
-│  │ • orderDetails[].deliveryPrice    ✗ NOT SHOWN    │   │
-│  └─────────────────────────────────────────────────────┘   │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
+### المرحلة الأولى: الاستقبال (Order Ingestion)
+- **عبر شوبيفاي (Shopify Webhooks)**: بمجرد أن يطلب الزبون من متجر شوبيفاي (عبر نموذج COD Form)، يقوم السيرفر بالتقاط الطلبية فوراً.
+- **الذكاء في الاستقبال**: النظام يقوم آلياً باكتشاف الكلمات المفتاحية لمعرفة إذا كان الطرد "قابل للكسر (Fragile)" أو "توصيل للمكتب (Stop Desk)".
+- **الترجمة الآلية**: إذا أرسل شوبيفاي الولاية والبلدية كأرقام (مثال: 47)، يقوم السيرفر بترجمتها فوراً إلى اسمها الحقيقي (غرداية) قبل حفظها في قاعدة البيانات ErpOrder.
+- **الاستقبال اليدوي (Manual Entry)**: إمكانية إدخال طلبيات يدوياً من الفيسبوك أو مصادر أخرى.
 
----
+### المرحلة الثانية: التأكيد والتعديل (Confirmation & Processing)
+- تظهر الطلبيات في شاشة `ShopifyOrders.jsx` كطلبيات "بانتظار التأكيد (Unconfirmed)".
+- يقوم فريق العمل بالاتصال بالزبون.
+- إذا أراد الزبون التوصيل للمكتب في بلدية نائية، يقوم فريق العمل بالضغط على "تعديل" لتغيير البلدية إلى أقرب نقطة استلام لشركة التوصيل، وتأكيد السعر.
+- بعد التأكيد، يُضغط على زر "✅ تأكيد".
 
-## 🔒 SECURITY FLOW
+### المرحلة الثالثة: التصدير لشركة التوصيل (Dispatch & Excel Export)
+- يقوم المدير بتحديد الطلبيات المؤكدة والضغط على "تصدير إلى Excel".
+- يقوم السيرفر بتوليد ملف إكسل مطابق تماماً لمعايير شركة التوصيل (Ecotrack/Yalidine):
+  - **الدقة**: عمود code wilaya يأخذ رقماً (14)، وعمود commune يأخذ نصاً (Frenda).
+  - **الخيارات**: يتم وضع `OUI` في عمود Stop Desk و Fragile إذا تم تحديدها.
+  - **المرونة**: ترك عمود رقم التتبع (Reference) فارغاً لتتولى شركة التوصيل تعبئته.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    MERCHANT LOGIN REQUEST                   │
-└─────────────────────────────────────────────────────────────┘
-                             │
-                             ▼
-           ┌──────────────────────────────────┐
-           │ POST /api/merchant/auth/login     │
-           │ Body: { email, password }         │
-           └──────────────────────────────────┘
-                             │
-                             ▼
-        ┌─────────────────────────────────────┐
-        │ Find Merchant by email              │
-        │ WHERE email = req.body.email        │
-        │ AND status = 'active'               │
-        └─────────────────────────────────────┘
-                             │
-                    ┌────────┴────────┐
-                    │                 │
-            ✓ Found              Not Found
-              │                      │
-              ▼                      ▼
-        ┌──────────────┐      ┌─────────────┐
-        │ Verify Pass  │      │ Return 401  │
-        └──────┬───────┘      │ Unauthorized│
-               │              └─────────────┘
-        ┌──────┴─────────┐
-        │                │
-       ✓                ✗
-       │                │
-       ▼                ▼
-  Generate      Return 401
-   JWT Token    Invalid
-   │         Credentials
-   ▼
-┌─────────────────────────────────┐
-│ jwt.sign({                       │
-│   id: merchant._id,              │
-│   email: merchant.email,         │
-│   name: merchant.name,           │
-│   type: 'merchant'     ← KEY!    │
-│ }, JWT_SECRET, {                 │
-│   expiresIn: '30d'               │
-│ })                               │
-└─────────────────────────────────┘
-   │
-   ▼
-┌─────────────────────────────────┐
-│ Return Response:                 │
-│ {                                │
-│   token: "eyJhbGc...",          │
-│   merchant: {                    │
-│     id, name, email, status      │
-│   }                              │
-│ }                                │
-└─────────────────────────────────┘
-   │
-   ▼
-┌─────────────────────────────────┐
-│ Client stores in localStorage:   │
-│ • merchantToken = JWT            │
-│ • merchantUser = merchant object │
-└─────────────────────────────────┘
-```
+### المرحلة الرابعة: الاستلام والتسوية المالية (Reconciliation - استيراد الإكسل)
+*(هذه هي المرحلة القادمة التي نركز عليها)*
+- بعد أيام، ترسل لك شركة التوصيل ملف إكسل يحتوي على الطلبيات (التي تم توصيلها وقبض ثمنها / Paid) والطلبيات (المرتجعة / Returned).
+- ستقوم برفع هذا الملف إلى نظامنا (ERP).
+- سيقوم النظام بمطابقة الطلبيات.
+- **المرتجعات (Returns)**: يغير حالتها إلى Returned، ويسجل "تكلفة المرتجع" كخسارة على التاجر.
+- **المدفوعة (Delivered/Paid)**: يغير حالتها إلى Paid، ويحسب الصافي (المبلغ الإجمالي - تكلفة التوصيل - تكلفة الفلفيلمنت الخاصة بك).
 
----
+### المرحلة الخامسة: الفواتير والمحاسبة (Invoicing & Payouts)
+- بعد الاستيراد، سيقوم النظام بإنشاء "إكسل صغير وملخص (Printable Report)" أو فاتورة PDF.
+- هذا الملف يحتوي على:
+  - كم طلبية تم توصيلها وما هو مجموع أموالها.
+  - كم طلبية عادت وكم هي تكلفة المرتجعات.
+  - كم أخذت أنت (تكلفة الفلفيلمنت والخدمة).
+  - الصافي النهائي: المبلغ الذي يجب أن تسلمه لصاحب المحل نقداً أو عبر البريد.
+- يتم إعطاء هذا الملف لصاحب المحل لضمان الشفافية المطلقة.
 
-## 📊 DATA MASKING EXAMPLE
+## 3. أين نحن الآن وإلى أين نذهب؟ (Current State & Goal)
+ما أنجزناه بنجاح 100%: تم بناء المراحل (1) و (2) و (3) بامتياز. استقبال شوبيفاي يعمل بدقة متناهية (يصلح الأرقام، يكتشف Stop Desk، البلدية تُحفظ بشكل صحيح). واجهة التعديل والتأكيد مثالية، وتصدير الإكسل الخاص بشركة التوصيل نظيف واحترافي. إضافةً إلى القدرة على حذف الطلبيات التجريبية.
 
-```
-USER SPENDS $100 ON ADS
-═══════════════════════════════════════════════════════════
-
-ADMIN VIEW (Complete Data)           MERCHANT VIEW (Filtered)
-─────────────────────────────────   ─────────────────────────
-Purchase Cost:                       Ad Spend:
-$100 × 251 DZD = 25,100 DZD        $100 × 330 DZD = 33,000 DZD
-                                    (This is what they pay)
-Sold to Merchant:
-$100 × 330 DZD = 33,000 DZD
-
-Admin Profit:
-33,000 - 25,100 = 7,900 DZD
-(Merchant NEVER sees this)
-
-Fulfillment Fee:
-If Shopify: +180 DZD
-(Merchant transaction shows: 33,000 DZD only)
-
-Invoice Breakdown:
-Ad Spend: 33,000 DZD        Invoice Total Owed:
-Shopify Fee: 180 DZD        33,000 DZD
-Other Expenses: X DZD       (No itemization shown)
-Total: Y DZD
-```
-
----
-
-## ✅ SECURITY GUARANTEES
-
-| Requirement | Implementation | Verified |
-|-------------|------------------|----------|
-| Only merchant sees own data | WHERE merchantId === req.merchant.id | ✅ |
-| No 251 DZD rate visible | Filtered out in response | ✅ |
-| No fulfillment fees visible | Not included in calculations | ✅ |
-| No admin profits visible | Calculations hidden | ✅ |
-| Merchant rate shown only | adRateDzd: 330 | ✅ |
-| JWT verified on each request | authenticateMerchant middleware | ✅ |
-| Token type checked | token.type === 'merchant' | ✅ |
-| Authorization required | Bearer token in header | ✅ |
-| 30-day expiration | expiresIn: '30d' | ✅ |
-| No cross-merchant access | merchantId filtering on all queries | ✅ |
-
----
-
-## 🎯 QUICK TEST FLOW
-
-```
-1. Run seed script
-   └─ Creates test merchant
-   └─ Email: merchant@example.com
-   └─ Password: testPassword123
-
-2. Login via web browser
-   └─ Navigate to /merchant/login
-   └─ Enter credentials
-   └─ JWT token stored in localStorage
-
-3. View dashboard
-   └─ Metrics loaded
-   └─ Only merchant data shown
-   └─ Costs properly masked
-
-4. Run test suite
-   └─ Verifies all endpoints
-   └─ Checks security (no USD rates)
-   └─ Confirms data isolation
-
-5. Verify costs are hidden
-   └─ Check network tab
-   └─ Response has no 251 DZD
-   └─ Response has no 180/200 DZD
-   └─ Response has only 330 DZD
-```
-
----
-
-**BUILD STATUS: ✅ COMPLETE & VERIFIED**
+**الهدف القادم (Next Steps)**: التركيز على المرحلة الرابعة والخامسة. سنقوم ببرمجة صفحة "رفع إكسل شركة التوصيل (Import Excel)"، لكي يقرأ النظام الحالات الجديدة (توصيل/مرتجع) ويحسب الأموال أوتوماتيكياً، ثم نصمم "فاتورة التاجر (Merchant Invoice Report)" لتكون جاهزة للطباعة والتسليم.

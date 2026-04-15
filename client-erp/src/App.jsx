@@ -16,6 +16,7 @@ import AdminInvoices from './pages/AdminInvoices';
 import AdminEcotrack from './pages/AdminEcotrack';
 import AdminSettings from './pages/AdminSettings';
 import AdminOrderTracking from './pages/AdminOrderTracking';
+import AdminReconciliation from './pages/AdminReconciliation';
 import NewOrder from './pages/NewOrder';
 import MerchantLogin from './pages/MerchantLogin';
 import MerchantDashboard from './pages/MerchantDashboard';
@@ -38,6 +39,7 @@ const App = () => {
         <Route path="/admin/expenses" element={<ProtectedRoute element={<AdminExpenses />} allowedRoles={['admin', 'superadmin']} />} />
         <Route path="/admin/merchants" element={<ProtectedRoute element={<AdminMerchants />} allowedRoles={['admin', 'superadmin']} />} />
         <Route path="/admin/invoices" element={<ProtectedRoute element={<AdminInvoices />} allowedRoles={['admin', 'superadmin']} />} /> 
+        <Route path="/admin/reconciliation" element={<ProtectedRoute element={<AdminReconciliation />} allowedRoles={['admin', 'superadmin']} />} />
         <Route path="/admin/ecotrack" element={<ProtectedRoute element={<AdminEcotrack />} allowedRoles={['admin', 'superadmin']} />} />
         <Route path="/admin/settings" element={<ProtectedRoute element={<AdminSettings />} allowedRoles={['admin', 'superadmin']} />} />
         <Route path="/admin/tracking" element={<ProtectedRoute element={<AdminOrderTracking />} allowedRoles={['admin', 'superadmin']} />} />

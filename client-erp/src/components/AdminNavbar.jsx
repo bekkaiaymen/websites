@@ -1,6 +1,6 @@
-﻿import React from 'react';
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LogOut, BarChart3, Box, Grid3x3, Settings, Truck, Wallet, Users, FileText, RefreshCw, Plus, DollarSign } from 'lucide-react';
+import { LogOut, BarChart3, Box, Grid3x3, Settings, Truck, Wallet, Users, FileText, RefreshCw, Plus, DollarSign, Layers } from 'lucide-react';
 
 const AdminNavbar = ({ onLogout }) => {
   const location = useLocation();
@@ -93,6 +93,18 @@ const AdminNavbar = ({ onLogout }) => {
               >
                 <FileText className="w-4 h-4" />
                 <span className="text-sm">الفواتير</span>
+              </Link>
+
+              <Link
+                to="/admin/reconciliation"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  isActive('/admin/reconciliation')
+                    ? 'bg-pink-600 text-white'
+                    : 'text-gray-400 hover:text-brand-cream bg-pink-600/10 hover:bg-pink-600/20'
+                }`}
+              >
+                <Layers className="w-4 h-4" />
+                <span className="text-sm">تسوية الإكسل</span>
               </Link>
 
               <Link
