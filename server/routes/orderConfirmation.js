@@ -394,3 +394,4 @@ router.delete('/:orderId', authenticateToken, async (req, res) => {
   }
 });
 
+module.exports = router;
