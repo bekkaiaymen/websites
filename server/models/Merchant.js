@@ -4,7 +4,18 @@ const mongoose = require('mongoose');
 const merchantSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true,
+    trim: true
+  },
+  businessName: {
+    type: String,
+    trim: true
+  },
+  ownerName: {
+    type: String,
+    trim: true
+  },
+  phone: {
+    type: String,
     trim: true
   },
   email: {

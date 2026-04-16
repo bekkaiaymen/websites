@@ -183,7 +183,7 @@ router.post('/generate/:merchantId', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const invoices = await ErpInvoice.find()
-      .populate('merchantId', 'businessName ownerName email phone')
+      .populate('merchantId', 'name businessName ownerName email phone')
       .sort({ createdAt: -1 });
 
     res.status(200).json(invoices);
@@ -201,7 +201,7 @@ router.get('/:id', async (req, res) => {
     const { id } = req.params;
 
     const invoice = await ErpInvoice.findById(id)
-      .populate('merchantId', 'businessName ownerName email phone financialSettings');
+      .populate('merchantId', 'name email financialSettings');
 
     if (!invoice) {
       return res.status(404).json({ error: 'الفاتورة غير موجودة' });
@@ -222,7 +222,7 @@ router.get('/:id/download', async (req, res) => {
     const { id } = req.params;
 
     const invoice = await ErpInvoice.findById(id)
-      .populate('merchantId', 'businessName ownerName email phone');
+      .populate('merchantId', 'name businessName ownerName email phone');
 
     if (!invoice) {
       return res.status(404).json({ error: 'الفاتورة غير موجودة' });
@@ -234,10 +234,9 @@ router.get('/:id/download', async (req, res) => {
     // ورقة المعلومات الأساسية
     const basicInfoData = [
       ['بيانات الفاتورة', ''],
-      ['التاجر', invoice.merchantId?.businessName || 'مجهول'],
-      ['المالك', invoice.merchantId?.ownerName || 'مجهول'],
+      ['التاجر', invoice.merchantId?.name || 'مجهول'],
       ['البريد الإلكتروني', invoice.merchantId?.email || 'مجهول'],
-      ['الهاتف', invoice.merchantId?.phone || 'مجهول'],
+      ['الهاتف', 'مجهول'],
       ['فترة الفاتورة', `${new Date(invoice.periodStartDate).toLocaleDateString('ar-DZ')} - ${new Date(invoice.periodEndDate).toLocaleDateString('ar-DZ')}`],
       ['تاريخ التوليد', new Date(invoice.createdAt).toLocaleDateString('ar-DZ')],
       [''],
@@ -340,7 +339,7 @@ router.get('/:id/download', async (req, res) => {
     }
 
     // تحضير الملف للتنزيل
-    const filename = `invoice_${invoice.merchantId?.businessName.replace(/\s+/g, '_')}_${new Date(invoice.periodStartDate).getFullYear()}-${String(new Date(invoice.periodStartDate).getMonth() + 1).padStart(2, '0')}.xlsx`;
+    const filename = `invoice_${(invoice.merchantId?.businessName || invoice.merchantId?.name || 'Merchant').replace(/\s+/g, '_')}_${new Date(invoice.periodStartDate).getFullYear()}-${String(new Date(invoice.periodStartDate).getMonth() + 1).padStart(2, '0')}.xlsx`;
     
     const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
     res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
