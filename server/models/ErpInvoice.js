@@ -43,6 +43,12 @@ const ErpInvoiceSchema = new mongoose.Schema({
       default: 0
     },
 
+    // رسوم التوصيل لطلبيات ناجحة (Delivery Fees)
+    totalDeliveryFeesDzd: {
+      type: Number,
+      default: 0
+    },
+
     // الخصومات
     totalCommissionsDzd: {
       type: Number,

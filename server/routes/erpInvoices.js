@@ -67,6 +67,7 @@ router.post('/generate/:merchantId', async (req, res) => {
     let grossRevenueDzd = 0;         // إجمالي المداخيل المحصلة من التوصيل
     let totalFollowUpFeesDzd = 0;    // إجمالي حق متابعتك (مدخولك الصافي من الطلبيات)
     let totalCourierPenaltiesDzd = 0;// غرامات الإرجاع التي فرضتها شركة التوصيل
+    let totalDeliveryFeesDzd = 0;    // رسوم التوصيل للطلبيات المسلمة
     
     let deliveredCount = 0;
     let returnedCount = 0;
@@ -77,6 +78,7 @@ router.post('/generate/:merchantId', async (req, res) => {
 
       if (o.status === 'paid') {
         grossRevenueDzd += o.financials.amountCollected || 0;
+        totalDeliveryFeesDzd += o.financials.deliveryFee || 0;
         deliveredCount++;
       } else if (o.status === 'returned') {
         totalCourierPenaltiesDzd += o.financials.returnedPenaltyFee || 0; // يتم تحميله كخسارة على التاجر
@@ -116,7 +118,7 @@ router.post('/generate/:merchantId', async (req, res) => {
     // ============================================
     // الفاتورة الختامية (Net Payout)
     // ============================================
-    const totalDeductions = totalFollowUpFeesDzd + totalCourierPenaltiesDzd + totalExpensesDzd + totalAdsDzd;
+    const totalDeductions = totalFollowUpFeesDzd + totalCourierPenaltiesDzd + totalExpensesDzd + totalAdsDzd + totalDeliveryFeesDzd;
     const netPayout = grossRevenueDzd - totalDeductions; // هذا هو المبلغ الذي ستلزم تحويله بالـ CCP للتاجر
 
     const totalOrders = deliveredCount + returnedCount;
@@ -132,6 +134,7 @@ router.post('/generate/:merchantId', async (req, res) => {
         returnedCount,
         deliverySuccessRate: `${deliverySuccessRate}%`,
         totalRevenuesDzd: grossRevenueDzd,
+        totalDeliveryFeesDzd: totalDeliveryFeesDzd,
         totalCommissionsDzd: totalFollowUpFeesDzd,
         adSpendUsd: adSpends.reduce((sum, ad) => sum + ad.amountUsd, 0),
         adSpendDzd: totalAdsDzd,
@@ -248,7 +251,8 @@ router.get('/:id/download', async (req, res) => {
       [''],
       ['الملخص المالي', ''],
       ['إجمالي الإيرادات (DZD)', invoice.summary.totalRevenuesDzd],
-      ['عمولات التوصيل (DZD)', invoice.summary.totalCommissionsDzd],
+      ['رسوم التوصيل للشركة (DZD)', invoice.summary.totalDeliveryFeesDzd || 0],
+      ['عمولات المتابعة (DZD)', invoice.summary.totalCommissionsDzd],
       ['تكاليف الإعلانات (USD)', invoice.summary.adSpendUsd],
       ['تكاليف الإعلانات (DZD)', invoice.summary.adSpendDzd],
       ['المصاريف المقسمة (DZD)', invoice.summary.sharedExpensesDzd],
@@ -513,12 +517,12 @@ router.get('/:id/pdf', async (req, res) => {
     y += 25;
 
     const financialRows = [
-      ['إجمالي المبالغ المحصّلة / Total Collected', `${fmt(summary.totalCollectedAmount)} DA`, '#27ae60'],
-      ['(-) مصاريف التوصيل / Delivery Fees', `-${fmt(summary.totalDeliveryFees)} DA`, '#e74c3c'],
-      ['(-) رسوم المتابعة / Follow-up Fees', `-${fmt(summary.totalFollowUpFees)} DA`, '#e67e22'],
-      ['(-) غرامات المرتجعات / Return Penalties', `-${fmt(summary.totalReturnPenalties)} DA`, '#e74c3c'],
-      ['(-) مصاريف الإعلانات / Ad Spend', `-${fmt(summary.totalAdSpendDzd)} DA`, '#9b59b6'],
-      ['(-) مصاريف مشتركة / Shared Expenses', `-${fmt(summary.totalSharedExpensesForMerchant)} DA`, '#8e44ad'],
+      ['إجمالي المبالغ المحصّلة / Total Collected', `${fmt(summary.totalRevenuesDzd)} DA`, '#27ae60'],
+      ['(-) مصاريف التوصيل / Delivery Fees', `-${fmt(summary.totalDeliveryFeesDzd)} DA`, '#e74c3c'],
+      ['(-) رسوم المتابعة / Follow-up Fees', `-${fmt(summary.totalCommissionsDzd)} DA`, '#e67e22'],
+      ['(-) غرامات المرتجعات / Return Penalties', `-${fmt(summary.returnedPenaltiesDzd)} DA`, '#e74c3c'],
+      ['(-) مصاريف الإعلانات / Ad Spend', `-${fmt(summary.adSpendDzd)} DA`, '#9b59b6'],
+      ['(-) مصاريف مشتركة / Shared Expenses', `-${fmt(summary.sharedExpensesDzd)} DA`, '#8e44ad'],
     ];
 
     financialRows.forEach(([label, value, color]) => {
@@ -531,7 +535,7 @@ router.get('/:id/pdf', async (req, res) => {
     y += 5;
     doc.rect(40, y, 515, 35).fill('#1a1a2e');
     doc.fontSize(13).fill('#e8b923').text('✅ NET PAYOUT / الصافي المستحق للتاجر', 55, y + 8);
-    doc.fontSize(14).fill('#ffffff').text(`${fmt(summary.netPayoutToMerchant)} DA`, 350, y + 8, { align: 'right', width: 190 });
+    doc.fontSize(14).fill('#ffffff').text(`${fmt(summary.totalOwedDzd)} DA`, 350, y + 8, { align: 'right', width: 190 });
 
     // ===== جدول الطلبيات المسلّمة =====
     y += 55;
