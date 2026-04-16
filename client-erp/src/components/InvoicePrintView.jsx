@@ -193,23 +193,26 @@ const InvoicePrintView = ({ invoiceId, adminToken, onClose }) => {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
               <thead>
                 <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
-                  <th style={{ padding: '8px', textAlign: 'right' }}>#</th>
-                  <th style={{ padding: '8px', textAlign: 'right' }}>Tracking</th>
-                  <th style={{ padding: '8px', textAlign: 'right' }}>الزبون</th>
-                  <th style={{ padding: '8px', textAlign: 'right' }}>المبلغ</th>
-                  <th style={{ padding: '8px', textAlign: 'right' }}>التوصيل</th>
-                  <th style={{ padding: '8px', textAlign: 'right' }}>المتابعة</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>#</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>Tracking</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>الزبون (الهاتف)</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>المبلغ المحصل</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>التوصيل</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>الفيلفيلمنت</th>
                 </tr>
               </thead>
               <tbody>
                 {deliveredOrders.map((order, idx) => (
                   <tr key={idx} style={{ borderBottom: '1px solid #f3f4f6', background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
-                    <td style={{ padding: '6px 8px', color: '#999' }}>{idx + 1}</td>
-                    <td style={{ padding: '6px 8px', fontFamily: 'monospace', fontSize: '10px' }}>{order.deliveryTrackingId || order.trackingId}</td>
-                    <td style={{ padding: '6px 8px' }}>{order.customerData?.name || '—'}</td>
-                    <td style={{ padding: '6px 8px', color: '#16a34a', fontWeight: '600' }}>{fmt(order.financials?.amountCollected)}</td>
-                    <td style={{ padding: '6px 8px', color: '#dc2626' }}>{fmt(order.financials?.deliveryFee)}</td>
-                    <td style={{ padding: '6px 8px', color: '#ea580c' }}>{fmt(order.financials?.followUpFeeApplied)}</td>
+                    <td style={{ padding: '8px', color: '#999', fontWeight: 'bold' }}>{idx + 1}</td>
+                    <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '11px', color: '#374151' }}>{order.deliveryTrackingId || order.trackingId}</td>
+                    <td style={{ padding: '8px' }}>
+                      <div style={{ fontWeight: '600', color: '#111827' }}>{order.customerData?.name || '—'}</div>
+                      <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '2px', fontFamily: 'monospace' }}>{order.customerData?.phone || '—'}</div>
+                    </td>
+                    <td style={{ padding: '8px', color: '#16a34a', fontWeight: 'bold' }}>{fmt(order.financials?.amountCollected)}</td>
+                    <td style={{ padding: '8px', color: '#dc2626', fontWeight: 'bold' }}>{fmt(order.financials?.deliveryFee)}</td>
+                    <td style={{ padding: '8px', color: '#ea580c', fontWeight: 'bold' }}>{fmt(order.financials?.followUpFeeApplied)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -226,21 +229,24 @@ const InvoicePrintView = ({ invoiceId, adminToken, onClose }) => {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
               <thead>
                 <tr style={{ background: '#fef2f2', borderBottom: '2px solid #fecaca' }}>
-                  <th style={{ padding: '8px', textAlign: 'right' }}>#</th>
-                  <th style={{ padding: '8px', textAlign: 'right' }}>Tracking</th>
-                  <th style={{ padding: '8px', textAlign: 'right' }}>الزبون</th>
-                  <th style={{ padding: '8px', textAlign: 'right' }}>الغرامة</th>
-                  <th style={{ padding: '8px', textAlign: 'right' }}>المتابعة</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>#</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>Tracking</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>الزبون (الهاتف)</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>غرامة التوصيل</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>الفيلفيلمنت</th>
                 </tr>
               </thead>
               <tbody>
                 {returnedOrders.map((order, idx) => (
                   <tr key={idx} style={{ borderBottom: '1px solid #fef2f2', background: idx % 2 === 0 ? 'white' : '#fffafa' }}>
-                    <td style={{ padding: '6px 8px', color: '#999' }}>{idx + 1}</td>
-                    <td style={{ padding: '6px 8px', fontFamily: 'monospace', fontSize: '10px' }}>{order.deliveryTrackingId || order.trackingId}</td>
-                    <td style={{ padding: '6px 8px' }}>{order.customerData?.name || '—'}</td>
-                    <td style={{ padding: '6px 8px', color: '#dc2626', fontWeight: '600' }}>{fmt(order.financials?.returnedPenaltyFee)}</td>
-                    <td style={{ padding: '6px 8px', color: '#ea580c' }}>{fmt(order.financials?.followUpFeeApplied)}</td>
+                    <td style={{ padding: '8px', color: '#999', fontWeight: 'bold' }}>{idx + 1}</td>
+                    <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '11px', color: '#374151' }}>{order.deliveryTrackingId || order.trackingId}</td>
+                    <td style={{ padding: '8px' }}>
+                      <div style={{ fontWeight: '600', color: '#111827' }}>{order.customerData?.name || '—'}</div>
+                      <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '2px', fontFamily: 'monospace' }}>{order.customerData?.phone || '—'}</div>
+                    </td>
+                    <td style={{ padding: '8px', color: '#dc2626', fontWeight: 'bold' }}>{fmt(order.financials?.returnedPenaltyFee)}</td>
+                    <td style={{ padding: '8px', color: '#ea580c', fontWeight: 'bold' }}>{fmt(order.financials?.followUpFeeApplied)}</td>
                   </tr>
                 ))}
               </tbody>

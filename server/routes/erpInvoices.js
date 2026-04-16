@@ -550,7 +550,7 @@ router.get('/:id/pdf', async (req, res) => {
       doc.fontSize(8).fill('#333');
       doc.text('#', 45, y + 4, { width: 25 });
       doc.text('Tracking', 70, y + 4, { width: 120 });
-      doc.text('Customer', 190, y + 4, { width: 100 });
+      doc.text('Customer (Phone)', 190, y + 4, { width: 110 });
       doc.text('Amount', 310, y + 4, { width: 70, align: 'right' });
       doc.text('Del. Fee', 385, y + 4, { width: 60, align: 'right' });
       doc.text('Follow-up', 450, y + 4, { width: 60, align: 'right' });
@@ -563,7 +563,7 @@ router.get('/:id/pdf', async (req, res) => {
         doc.fontSize(7).fill('#333');
         doc.text(String(idx + 1), 45, y + 4, { width: 25 });
         doc.text(order.deliveryTrackingId || order.trackingId || '', 70, y + 4, { width: 120 });
-        doc.text(order.customerData?.name || '', 190, y + 4, { width: 100 });
+        doc.text(`${order.customerData?.name || ''} - ${order.customerData?.phone || ''}`.substring(0, 35), 190, y + 4, { width: 110 });
         doc.fill('#27ae60').text(`${fmt(order.financials?.amountCollected)}`, 310, y + 4, { width: 70, align: 'right' });
         doc.fill('#e74c3c').text(`${fmt(order.financials?.deliveryFee)}`, 385, y + 4, { width: 60, align: 'right' });
         doc.fill('#e67e22').text(`${fmt(order.financials?.followUpFeeApplied)}`, 450, y + 4, { width: 60, align: 'right' });
@@ -587,7 +587,7 @@ router.get('/:id/pdf', async (req, res) => {
       doc.fontSize(8).fill('#333');
       doc.text('#', 45, y + 4, { width: 25 });
       doc.text('Tracking', 70, y + 4, { width: 130 });
-      doc.text('Customer', 200, y + 4, { width: 120 });
+      doc.text('Customer (Phone)', 200, y + 4, { width: 120 });
       doc.text('Penalty', 380, y + 4, { width: 80, align: 'right' });
       doc.text('Follow-up', 460, y + 4, { width: 60, align: 'right' });
       y += 20;
@@ -599,7 +599,7 @@ router.get('/:id/pdf', async (req, res) => {
         doc.fontSize(7).fill('#333');
         doc.text(String(idx + 1), 45, y + 4, { width: 25 });
         doc.text(order.deliveryTrackingId || order.trackingId || '', 70, y + 4, { width: 130 });
-        doc.text(order.customerData?.name || '', 200, y + 4, { width: 120 });
+        doc.text(`${order.customerData?.name || ''} - ${order.customerData?.phone || ''}`.substring(0, 35), 200, y + 4, { width: 120 });
         doc.fill('#e74c3c').text(`${fmt(order.financials?.returnedPenaltyFee)}`, 380, y + 4, { width: 80, align: 'right' });
         doc.fill('#e67e22').text(`${fmt(order.financials?.followUpFeeApplied)}`, 460, y + 4, { width: 60, align: 'right' });
         y += 16;

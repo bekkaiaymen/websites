@@ -108,12 +108,15 @@ router.post('/upload-reconciliation', async (req, res) => {
       const prestationType = (row['Type de préstation'] || row['Type de prestation'] || '').toString().trim().toLowerCase();
       const stateName = (row['State.Name'] || row['Statut'] || row['statut'] || '').toString().trim().toLowerCase();
       
-      // المبلغ المحصّل (COD) — تنظيف القيمة من الحروف الزائدة مثل "/" 
-      const rawMontant = (row['montant'] || row['TotalAmount'] || row['Montant'] || row['Montant (DA)'] || '0').toString().replace(/[^\d.]/g, '');
-      let totalAmount = parseFloat(rawMontant) || 0;
+      // المبلغ المحصّل (COD) — استخراج الرقم الأول بدقة لتجنب أخطاء مثل 3200/3200
+      const rawMontantStr = (row['montant'] || row['TotalAmount'] || row['Montant'] || row['Montant (DA)'] || '0').toString();
+      const montantMatch = rawMontantStr.match(/(\d+(?:\.\d+)?)/);
+      let totalAmount = montantMatch ? parseFloat(montantMatch[1]) : 0;
       
       // رسوم التوصيل
-      let deliveryPrice = parseFloat(row['Frais de livraison'] || row['DeliveryPrice'] || row['Frais livraison'] || 0);
+      const rawDeliveryStr = (row['Frais de livraison'] || row['DeliveryPrice'] || row['Frais livraison'] || '0').toString();
+      const delMatch = rawDeliveryStr.match(/(\d+(?:\.\d+)?)/);
+      let deliveryPrice = delMatch ? parseFloat(delMatch[1]) : 0;
 
       // رقم الهاتف من الإكسل (للمطابقة الذكية) — تنظيف من "/" والمسافات
       const rawPhone = (
