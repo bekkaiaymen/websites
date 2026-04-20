@@ -21,9 +21,10 @@ const AdminMerchants = () => {
     ownerName: '',
     phone: '',
     email: '',
+    password: '',
     financialSettings: {
       followUpFeeSuccessSpfy: '180',
-      followUpFeeSuccessMeta: '200',
+      followUpFeeSuccessPage: '200',
       adSaleCostDzd: '330',
       splitExpensePercentage: '50'
     }
@@ -125,12 +126,13 @@ const AdminMerchants = () => {
     setSelectedMerchant(merchant);
     setFormData({
       businessName: merchant.businessName,
-      ownerName: merchant.ownerName,
-      phone: merchant.phone,
-      email: merchant.email,
+      ownerName: merchant.ownerName || '',
+      phone: merchant.phone || '',
+      email: merchant.email || '',
+      password: '', // Leave blank when editing unless they want to change it
       financialSettings: {
         followUpFeeSuccessSpfy: merchant.financialSettings?.followUpFeeSuccessSpfy || '180',
-        followUpFeeSuccessMeta: merchant.financialSettings?.followUpFeeSuccessMeta || '200',
+        followUpFeeSuccessPage: merchant.financialSettings?.followUpFeeSuccessPage || '200',
         adSaleCostDzd: merchant.financialSettings?.adSaleCostDzd || '330',
         splitExpensePercentage: merchant.financialSettings?.splitExpensePercentage || '50'
       }
@@ -144,20 +146,25 @@ const AdminMerchants = () => {
       ownerName: '',
       phone: '',
       email: '',
+      password: '',
       financialSettings: {
         followUpFeeSuccessSpfy: '180',
-        followUpFeeSuccessMeta: '200',
+        followUpFeeSuccessPage: '200',
         adSaleCostDzd: '330',
         splitExpensePercentage: '50'
       }
     });
   };
 
-  const filteredMerchants = merchants.filter(m =>
-    m.businessName.includes(searchTerm) ||
-    m.ownerName.includes(searchTerm) ||
-    m.email.includes(searchTerm)
-  );
+  const filteredMerchants = merchants.filter(m => {
+    const search = searchTerm.toLowerCase();
+    return (
+      (m.businessName?.toLowerCase() || '').includes(search) ||
+      (m.ownerName?.toLowerCase() || '').includes(search) ||
+      (m.email?.toLowerCase() || '').includes(search) ||
+      (m.phone || '').includes(search)
+    );
+  });
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
@@ -207,7 +214,7 @@ const AdminMerchants = () => {
                 <tr>
                   <th className="p-4">الإجراءات</th>
                   <th className="p-4">سعر الإعلان (DZD)</th>
-                  <th className="p-4">عمولة Meta</th>
+                  <th className="p-4">عمولة فيسبوك</th>
                   <th className="p-4">عمولة Shopify</th>
                   <th className="p-4">الهاتف</th>
                   <th className="p-4">المالك</th>
@@ -243,7 +250,7 @@ const AdminMerchants = () => {
                         </div>
                       </td>
                       <td className="p-4 font-semibold">{merchant.financialSettings?.adSaleCostDzd || '330'} د.ج</td>
-                      <td className="p-4">{merchant.financialSettings?.followUpFeeSuccessMeta || '200'} د.ج</td>
+                      <td className="p-4">{merchant.financialSettings?.followUpFeeSuccessPage || '200'} د.ج</td>
                       <td className="p-4">{merchant.financialSettings?.followUpFeeSuccessSpfy || '180'} د.ج</td>
                       <td className="p-4" dir="ltr">{merchant.phone}</td>
                       <td className="p-4">{merchant.ownerName}</td>
@@ -336,6 +343,17 @@ const AdminMerchants = () => {
                   />
                 </div>
                 <div>
+                  <label className="text-gray-300 block mb-1">كلمة المرور *</label>
+                  <input
+                    type="password"
+                    required={!selectedMerchant}
+                    value={formData.password}
+                    onChange={e => setFormData({...formData, password: e.target.value})}
+                    placeholder={selectedMerchant ? "اتركه فارغاً لعدم التغيير" : "استخدمها لدخول التاجر"}
+                    className="w-full bg-[#1a120f] border border-gray-700 rounded p-2 text-white"
+                  />
+                </div>
+                <div>
                   <label className="text-gray-300 block mb-1">الهاتف *</label>
                   <input
                     type="tel"
@@ -360,11 +378,11 @@ const AdminMerchants = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-gray-300 block mb-1">عمولة التوصيل الناجحة (Meta)</label>
+                    <label className="text-gray-300 block mb-1">عمولة التوصيل الناجحة (فيسبوك)</label>
                     <input
                       type="number"
-                      value={formData.financialSettings.followUpFeeSuccessMeta}
-                      onChange={e => setFormData({...formData, financialSettings: {...formData.financialSettings, followUpFeeSuccessMeta: e.target.value}})}
+                      value={formData.financialSettings.followUpFeeSuccessPage}
+                      onChange={e => setFormData({...formData, financialSettings: {...formData.financialSettings, followUpFeeSuccessPage: e.target.value}})}
                       className="w-full bg-[#1a120f] border border-gray-700 rounded p-2 text-white"
                     />
                   </div>
@@ -442,6 +460,16 @@ const AdminMerchants = () => {
                   />
                 </div>
                 <div>
+                  <label className="text-gray-300 block mb-1">تغيير كلمة المرور</label>
+                  <input
+                    type="text"
+                    value={formData.password}
+                    onChange={e => setFormData({...formData, password: e.target.value})}
+                    placeholder="اتركه فارغاً لعدم التغيير"
+                    className="w-full bg-[#1a120f] border border-gray-700 rounded p-2 text-white"
+                  />
+                </div>
+                <div>
                   <label className="text-gray-300 block mb-1">الهاتف *</label>
                   <input
                     type="tel"
@@ -466,11 +494,11 @@ const AdminMerchants = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-gray-300 block mb-1">عمولة التوصيل الناجحة (Meta)</label>
+                    <label className="text-gray-300 block mb-1">عمولة التوصيل الناجحة (فيسبوك)</label>
                     <input
                       type="number"
-                      value={formData.financialSettings.followUpFeeSuccessMeta}
-                      onChange={e => setFormData({...formData, financialSettings: {...formData.financialSettings, followUpFeeSuccessMeta: e.target.value}})}
+                      value={formData.financialSettings.followUpFeeSuccessPage}
+                      onChange={e => setFormData({...formData, financialSettings: {...formData.financialSettings, followUpFeeSuccessPage: e.target.value}})}
                       className="w-full bg-[#1a120f] border border-gray-700 rounded p-2 text-white"
                     />
                   </div>

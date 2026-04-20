@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 // نظام تسويق ومتابعة مخصص لكل تاجر بدقة
 const merchantSchema = new mongoose.Schema({
@@ -60,5 +61,23 @@ const merchantSchema = new mongoose.Schema({
     default: []
   }
 }, { timestamps: true });
+
+// Hash password before saving
+merchantSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Method to compare password
+merchantSchema.methods.comparePassword = async function(candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
 
 module.exports = mongoose.model('Merchant', merchantSchema);

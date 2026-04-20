@@ -49,7 +49,7 @@ router.get('/:id', async (req, res) => {
 // ============================================
 router.post('/', async (req, res) => {
   try {
-    const { businessName, ownerName, phone, email, financialSettings } = req.body;
+    const { businessName, ownerName, phone, email, password, financialSettings } = req.body;
 
     // التحقق من المدخلات المطلوبة
     if (!businessName || !ownerName || !phone || !email) {
@@ -75,6 +75,7 @@ router.post('/', async (req, res) => {
       ownerName,
       phone,
       email,
+      password,
       financialSettings: defaultFinancialSettings
     });
 
@@ -96,7 +97,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { businessName, ownerName, phone, email, financialSettings } = req.body;
+    const { businessName, ownerName, phone, email, password, financialSettings } = req.body;
 
     const merchant = await Merchant.findById(id);
     if (!merchant) {
@@ -116,6 +117,7 @@ router.put('/:id', async (req, res) => {
     if (ownerName) merchant.ownerName = ownerName;
     if (phone) merchant.phone = phone;
     if (email) merchant.email = email;
+    if (password) merchant.password = password;
 
     // تحديث الإعدادات المالية
     if (financialSettings) {

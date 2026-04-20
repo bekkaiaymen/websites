@@ -92,15 +92,13 @@ router.post('/:merchantId/setup-password', async (req, res) => {
       });
     }
 
-    const merchant = await Merchant.findByIdAndUpdate(
-      merchantId,
-      { password },
-      { new: true }
-    ).select('_id name email status');
-
+    const merchant = await Merchant.findById(merchantId);
     if (!merchant) {
       return res.status(404).json({ error: 'Merchant not found' });
     }
+
+    merchant.password = password;
+    await merchant.save();
 
     res.json({ 
       message: 'Password set successfully',
