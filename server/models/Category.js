@@ -8,6 +8,7 @@ const CategorySchema = new mongoose.Schema({
   color: { type: String, default: '#bf953f' },
   description: { type: String },
   active: { type: Boolean, default: true },
+  merchantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Merchant' },
   createdAt: { type: Date, default: Date.now }
 });
 

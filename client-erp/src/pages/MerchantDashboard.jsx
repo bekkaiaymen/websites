@@ -16,6 +16,8 @@ import merchantAPI from '../api/merchantAPI';
 import MerchantNavbar from '../components/MerchantNavbar';
 import MerchantSidebar from '../components/MerchantSidebar';
 import ManualOrderForm from '../components/ManualOrderForm';
+import AdminProducts from './AdminProducts';
+import AdminCategories from './AdminCategories';
 
 /**
  * MerchantDashboard - Main merchant portal dashboard
@@ -129,6 +131,12 @@ const MerchantDashboard = () => {
             )}
 
             {activeTab === 'orders' && <OrdersTab merchantId={merchantUser.id} />}
+            {activeTab === 'products' && (
+              <AdminProducts asComponent={true} merchantId={merchantUser.id} />
+            )}
+            {activeTab === 'categories' && (
+              <AdminCategories asComponent={true} merchantId={merchantUser.id} />
+            )}
             {activeTab === 'wallet' && <WalletTab merchantId={merchantUser.id} />}
             {activeTab === 'invoices' && (
               <InvoicesTab merchantId={merchantUser.id} />

@@ -3,7 +3,7 @@ import { Edit, Save, X, Plus, AlertCircle, Trash2, Image as ImageIcon , Loader }
 import { useNavigate } from 'react-router-dom';
 import AdminNavbar from '../components/AdminNavbar';
 
-const AdminProducts = () => {
+const AdminProducts = ({ asComponent = false, merchantId = null }) => {
   const [products, setProducts] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
@@ -37,7 +37,12 @@ const AdminProducts = () => {
     try {
       setLoading(true);
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${API_URL}/api/products`);
+      
+      const url = merchantId 
+        ? `${API_URL}/api/products?merchantId=${merchantId}`
+        : `${API_URL}/api/products`;
+
+      const response = await fetch(url);
       
       if (!response.ok) throw new Error('فشل تحميل المنتجات');
       
@@ -54,7 +59,12 @@ const AdminProducts = () => {
   const fetchCategories = async () => {
     try {
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${API_URL}/api/categories`);
+
+      const url = merchantId 
+        ? `${API_URL}/api/categories?merchantId=${merchantId}`
+        : `${API_URL}/api/categories`;
+
+      const response = await fetch(url);
       
       if (!response.ok) throw new Error('فشل تحميل الفئات');
       
@@ -109,7 +119,7 @@ const AdminProducts = () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem('adminToken');
+      const token = merchantId ? localStorage.getItem('token') : localStorage.getItem('adminToken');
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       
       // Validate cost is not negative
@@ -173,7 +183,7 @@ const AdminProducts = () => {
     if (!window.confirm('هل أنت متأكد من حذف المنتجات المحددة؟')) return;
     try {
       setIsBulkDeleting(true);
-      const token = localStorage.getItem('adminToken');
+      const token = merchantId ? localStorage.getItem('token') : localStorage.getItem('adminToken');
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
       const response = await fetch(`${API_URL}/api/products/bulk-delete`, {
@@ -205,7 +215,7 @@ const AdminProducts = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('هل تريد حذف هذا المنتج؟')) return;
     try {
-      const token = localStorage.getItem('adminToken');
+      const token = merchantId ? localStorage.getItem('token') : localStorage.getItem('adminToken');
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       
       const response = await fetch(`${API_URL}/api/products/${id}`, {
@@ -240,7 +250,7 @@ const AdminProducts = () => {
       }
       setIsSubmitting(true);
 
-      const token = localStorage.getItem('adminToken');
+      const token = merchantId ? localStorage.getItem('token') : localStorage.getItem('adminToken');
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
       const response = await fetch(`${API_URL}/api/products`, {
@@ -254,14 +264,20 @@ const AdminProducts = () => {
           price: parseFloat(newProduct.price),
           cost: parseFloat(newProduct.cost) || 0,
           stock: parseInt(newProduct.stock) || 0,
-          image: imagePreview || null
+          image: imagePreview || null,
+          merchantId: merchantId || null
         })
       });
 
       if (response.status === 401 || response.status === 403) {
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminUser');
-        window.location.href = '/admin/login';
+        if (!merchantId) {
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminUser');
+          window.location.href = '/admin/login';
+        } else {
+          localStorage.removeItem('token');
+          window.location.href = '/merchant/login';
+        }
         return;
       }
       if (!response.ok) throw new Error('فشل إضافة المنتج');
@@ -294,10 +310,10 @@ const AdminProducts = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-dark to-[#0f0a08]">
-      <AdminNavbar onLogout={handleLogout} />
+    <div className={asComponent ? "" : "min-h-screen bg-gradient-to-br from-brand-dark to-[#0f0a08]"}>
+      {!asComponent && <AdminNavbar onLogout={handleLogout} />}
 
-      <div className="container mx-auto px-4 py-8">
+      <div className={asComponent ? "w-full" : "container mx-auto px-4 py-8"}>
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>

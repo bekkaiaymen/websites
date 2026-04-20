@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const ErpOrder = require('../models/ErpOrder');
 const ErpExpense = require('../models/ErpExpense');
 const Merchant = require('../models/Merchant');
+const ErpNotification = require('../models/ErpNotification');
 
 /**
  * Manual Order Controller
@@ -231,7 +232,23 @@ exports.createManualOrder = async (req, res) => {
     console.log(`✅ Fulfillment fee recorded: ${fulfillmentFee} DZD`);
 
     // =========================================================================
-    // STEP 6: Return Success Response
+    // STEP 6: Notify Admin and Merchant
+    // =========================================================================
+    try {
+      const notification = new ErpNotification({
+        title: 'طلبية يدوية جديدة',
+        message: `تم إضافة طلبية جديدة بقيمة ${totalAmount} للزبون ${customerName}`,
+        type: 'order_created',
+        audience: 'both',
+        merchantId: merchantId
+      });
+      await notification.save();
+    } catch(notifErr) {
+      console.error('Failed to create notification:', notifErr);
+    }
+
+    // =========================================================================
+    // STEP 7: Return Success Response
     // =========================================================================
 
     return res.status(201).json({

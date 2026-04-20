@@ -1,11 +1,56 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LogOut, BarChart3, Box, Grid3x3, Settings, Truck, Wallet, Users, FileText, RefreshCw, Plus, DollarSign, Layers } from 'lucide-react';
+import { LogOut, BarChart3, Box, Grid3x3, Settings, Truck, Wallet, Users, FileText, RefreshCw, Plus, DollarSign, Layers, Bell } from 'lucide-react';
 
 const AdminNavbar = ({ onLogout }) => {
   const location = useLocation();
 
   const isActive = (path) => location.pathname === path;
+  
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  
+  // URL to ERP API
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const token = localStorage.getItem('adminToken');
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchNotifications = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${apiUrl}/api/erp/notifications?unread=true`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data || []);
+        setUnreadCount((data || []).length);
+      }
+    } catch(err) {
+      console.error(err);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${apiUrl}/api/erp/notifications/read-all`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setUnreadCount(0);
+        setNotifications([]);
+        setShowDropdown(false);
+      }
+    } catch(err) {}
+  };
 
   // READ ROLE FOR CONDITIONAL RENDERING
   const adminUserStr = localStorage.getItem('adminUser');
@@ -22,13 +67,46 @@ const AdminNavbar = ({ onLogout }) => {
           <Link to="/" className="text-2xl font-bold text-brand-cream">
             Ali Baba
           </Link>
-          <button
-            onClick={onLogout}
-            className="flex items-center gap-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 px-4 py-2 rounded-lg transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="text-sm">تسجيل الخروج</span>
-          </button>
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <button 
+                onClick={() => setShowDropdown(!showDropdown)}
+                className="relative p-2 text-brand-gold hover:bg-brand-gold/10 rounded-full transition"
+              >
+                <Bell className="w-6 h-6" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+              
+              {showDropdown && notifications.length > 0 && (
+                <div className="absolute left-0 mt-2 w-80 bg-[#2a1f1a] border border-brand-gold/20 rounded-xl shadow-2xl z-50 overflow-hidden">
+                  <div className="p-3 border-b border-gray-700 flex justify-between items-center">
+                    <span className="font-bold text-white text-sm">الإشعارات الجديدة</span>
+                    <button onClick={markAllAsRead} className="text-xs text-brand-gold hover:underline">تحديد كـ مقروء</button>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {notifications.map((n) => (
+                      <div key={n._id} className="p-3 border-b border-gray-800 hover:bg-white/5 transition">
+                        <p className="text-sm font-bold text-brand-gold">{n.title}</p>
+                        <p className="text-xs text-gray-300 mt-1">{n.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={onLogout}
+              className="flex items-center gap-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 px-4 py-2 rounded-lg transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="text-sm">تسجيل الخروج</span>
+            </button>
+          </div>
         </div>
 
         {/* Navigation Links */}

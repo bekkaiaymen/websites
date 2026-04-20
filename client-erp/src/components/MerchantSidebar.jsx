@@ -5,7 +5,9 @@ import {
   Wallet,
   FileText,
   Settings,
-  Plus
+  Plus,
+  Box,
+  Grid3x3
 } from 'lucide-react';
 
 /**
@@ -24,6 +26,18 @@ const MerchantSidebar = ({ isOpen, activeTab, onTabChange }) => {
       label: 'الطلبات',
       icon: <Package className="w-5 h-5" />,
       description: 'جميع طلباتك'
+    },
+    {
+      id: 'products',
+      label: 'المنتجات',
+      icon: <Box className="w-5 h-5" />,
+      description: 'إدارة منتجاتك الخاصة'
+    },
+    {
+      id: 'categories',
+      label: 'الفئات',
+      icon: <Grid3x3 className="w-5 h-5" />,
+      description: 'تنظيم المنتجات'
     },
     {
       id: 'new-order',

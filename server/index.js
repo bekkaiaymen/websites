@@ -155,7 +155,11 @@ app.post('/api/orders', async (req, res) => {
 // GET /api/categories - Fetch all active categories
 app.get('/api/categories', async (req, res) => {
   try {
-    const categories = await Category.find({ active: true }).sort({ createdAt: -1 });
+    const filter = { active: true };
+    if (req.query.merchantId) {
+      filter.merchantId = req.query.merchantId;
+    }
+    const categories = await Category.find(filter).sort({ createdAt: -1 });
     res.json(categories);
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -166,7 +170,11 @@ app.get('/api/categories', async (req, res) => {
 // GET /api/categories/all - Fetch all categories (including inactive)
 app.get('/api/categories/all', async (req, res) => {
   try {
-    const categories = await Category.find().sort({ createdAt: -1 });
+    const filter = {};
+    if (req.query.merchantId) {
+      filter.merchantId = req.query.merchantId;
+    }
+    const categories = await Category.find(filter).sort({ createdAt: -1 });
     res.json(categories);
   } catch (error) {
     console.error('Error fetching all categories:', error);
@@ -177,7 +185,7 @@ app.get('/api/categories/all', async (req, res) => {
 // POST /api/categories - Create a new category
 app.post('/api/categories', authenticateToken, async (req, res) => {
   try {
-    const { name, nameAr, icon, image, color, description } = req.body;
+    const { name, nameAr, icon, image, color, description, merchantId } = req.body;
     
     if (!name || !nameAr) {
       return res.status(400).json({ error: 'Name and nameAr are required' });
@@ -190,6 +198,7 @@ app.post('/api/categories', authenticateToken, async (req, res) => {
       image,
       color,
       description,
+      merchantId: merchantId || req.user?.merchantId || null,
       active: true
     });
 
@@ -249,11 +258,15 @@ app.delete('/api/categories/:id', authenticateToken, async (req, res) => {
 // GET /api/products - Fetch all active products
 app.get('/api/products', async (req, res) => {
   try {
-    const { category } = req.query;
+    const { category, merchantId } = req.query;
     const filter = { active: true };
 
     if (category) {
       filter.category = category;
+    }
+    
+    if (merchantId) {
+      filter.merchantId = merchantId;
     }
 
     const products = await Product.find(filter)
@@ -270,7 +283,11 @@ app.get('/api/products', async (req, res) => {
 // GET /api/products/all - Fetch all products (including inactive)
 app.get('/api/products/all', async (req, res) => {
   try {
-    const products = await Product.find()
+    const filter = {};
+    if (req.query.merchantId) {
+      filter.merchantId = req.query.merchantId;
+    }
+    const products = await Product.find(filter)
       .populate('category')
       .sort({ createdAt: -1 });
     
@@ -295,7 +312,8 @@ app.post('/api/products', authenticateToken, async (req, res) => {
       stock,
       local,
       national,
-      premium
+      premium,
+      merchantId
     } = req.body;
 
     if (!name || !nameAr || !category || !price) {
@@ -316,6 +334,7 @@ app.post('/api/products', authenticateToken, async (req, res) => {
       local: local || false,
       national: national !== false,
       premium: premium || false,
+      merchantId: merchantId || req.user?.merchantId || null,
       active: true
     });
 
@@ -426,6 +445,7 @@ app.use('/api/erp/reconciliation', authenticateToken, require('./routes/erpRecon
 app.use('/api/erp/invoices', authenticateToken, require('./routes/erpInvoices'));
 app.use('/api/erp/merchants', authenticateToken, require('./routes/erpMerchants'));
 app.use('/api/erp/ecotrack', authenticateToken, require('./routes/ecotrackIntegration'));
+app.use('/api/erp/notifications', authenticateToken, require('./routes/erpNotifications'));
 
 // ============ SETTINGS & FULFILLMENT ROUTES (NEW) ============
 app.use('/api/erp', settingsRouter);

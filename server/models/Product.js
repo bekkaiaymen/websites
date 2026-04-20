@@ -14,6 +14,7 @@ const ProductSchema = new mongoose.Schema({
   national: { type: Boolean, default: true },
   premium: { type: Boolean, default: false },
   active: { type: Boolean, default: true },
+  merchantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Merchant' },
   createdAt: { type: Date, default: Date.now }
 });
 

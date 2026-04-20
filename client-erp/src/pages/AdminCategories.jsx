@@ -3,7 +3,7 @@ import { Plus, Edit2, Trash2, Loader2, Image } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AdminNavbar from '../components/AdminNavbar';
 
-const AdminCategories = () => {
+const AdminCategories = ({ asComponent = false, merchantId = null }) => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -27,9 +27,15 @@ const AdminCategories = () => {
   const fetchCategories = async () => {
     try {
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const res = await fetch(`${API_URL}/api/categories`, {
+      const url = merchantId 
+        ? `${API_URL}/api/categories?merchantId=${merchantId}`
+        : `${API_URL}/api/categories`;
+      
+      const token = merchantId ? localStorage.getItem('token') : localStorage.getItem('adminToken');
+      
+      const res = await fetch(url, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+          'Authorization': `Bearer ${token}`
         }
       });
       const data = await res.json();
@@ -73,14 +79,17 @@ const AdminCategories = () => {
         icon: formData.icon,
         description: formData.description,
         color: formData.color,
-        image: imagePreview || null // Send preview as base64 or null
+        image: imagePreview || null,
+        merchantId: merchantId || null
       };
+
+      const token = merchantId ? localStorage.getItem('token') : localStorage.getItem('adminToken');
 
       const res = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(dataToSend)
       });
@@ -122,10 +131,11 @@ const AdminCategories = () => {
     if (!confirm('هل أنت متأكد من الحذف؟')) return;
     try {
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const token = merchantId ? localStorage.getItem('token') : localStorage.getItem('adminToken');
       const res = await fetch(`${API_URL}/api/categories/${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+          'Authorization': `Bearer ${token}`
         }
       });
       if (!res.ok) {
@@ -153,8 +163,8 @@ const AdminCategories = () => {
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-dark to-[#0f0a08]">
-      <AdminNavbar onLogout={handleLogout} />
+    <div className={asComponent ? "" : "min-h-screen bg-gradient-to-br from-brand-dark to-[#0f0a08]"}>
+      {!asComponent && <AdminNavbar onLogout={handleLogout} />}
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="w-8 h-8 animate-spin text-brand-gold" />
       </div>
@@ -162,9 +172,9 @@ const AdminCategories = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-dark to-[#0f0a08]">
-      <AdminNavbar onLogout={handleLogout} />
-      <div className="container mx-auto px-4 py-8">
+    <div className={asComponent ? "" : "min-h-screen bg-gradient-to-br from-brand-dark to-[#0f0a08]"}>
+      {!asComponent && <AdminNavbar onLogout={handleLogout} />}
+      <div className={asComponent ? "w-full" : "container mx-auto px-4 py-8"}>
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold text-brand-cream">إدارة الفئات</h1>
           <button
