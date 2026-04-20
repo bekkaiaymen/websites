@@ -498,9 +498,9 @@ router.get('/:id/pdf', async (req, res) => {
     
     const summary = invoice.summary || {};
     const statsData = [
-      ['Delivered Orders / طلبيات مسلّمة', summary.totalDelivered || deliveredOrders.length],
-      ['Returned Orders / طلبيات مرتجعة', summary.totalReturned || returnedOrders.length],
-      ['Success Rate / نسبة النجاح', `${((summary.totalDelivered || deliveredOrders.length) / Math.max(1, (summary.totalDelivered || deliveredOrders.length) + (summary.totalReturned || returnedOrders.length)) * 100).toFixed(1)}%`],
+      ['Delivered Orders / طلبيات مسلّمة', summary.deliveredCount || deliveredOrders.length],
+      ['Returned Orders / طلبيات مرتجعة', summary.returnedCount || returnedOrders.length],
+      ['Success Rate / نسبة النجاح', `${((summary.deliveredCount || deliveredOrders.length) / Math.max(1, (summary.deliveredCount || deliveredOrders.length) + (summary.returnedCount || returnedOrders.length)) * 100).toFixed(1)}%`],
     ];
 
     statsData.forEach(([label, value]) => {

@@ -66,8 +66,8 @@ const InvoicePrintView = ({ invoiceId, adminToken, onClose }) => {
 
   const { invoice, merchant, deliveredOrders = [], returnedOrders = [] } = data;
   const summary = invoice.summary || {};
-  const totalOrders = (summary.totalDelivered || 0) + (summary.totalReturned || 0);
-  const successRate = totalOrders > 0 ? ((summary.totalDelivered || 0) / totalOrders * 100).toFixed(1) : 0;
+  const totalOrders = (summary.deliveredCount || 0) + (summary.returnedCount || 0);
+  const successRate = totalOrders > 0 ? ((summary.deliveredCount || 0) / totalOrders * 100).toFixed(1) : 0;
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 overflow-auto">
@@ -120,7 +120,7 @@ const InvoicePrintView = ({ invoiceId, adminToken, onClose }) => {
             <div>
               <p style={{ fontSize: '11px', color: '#888' }}>Period</p>
               <p style={{ fontSize: '14px', fontWeight: '600' }}>
-                {new Date(invoice.periodStart).toLocaleDateString('fr-DZ')} → {new Date(invoice.periodEnd).toLocaleDateString('fr-DZ')}
+                {new Date(invoice.periodStartDate).toLocaleDateString('fr-DZ')} → {new Date(invoice.periodEndDate).toLocaleDateString('fr-DZ')}
               </p>
             </div>
           </div>
@@ -136,11 +136,11 @@ const InvoicePrintView = ({ invoiceId, adminToken, onClose }) => {
         {/* ===== Statistics ===== */}
         <div style={{ display: 'flex', padding: '24px 40px', borderBottom: '1px solid #eee', gap: '16px' }}>
           <div style={{ flex: 1, textAlign: 'center', padding: '16px', background: '#f0fdf4', borderRadius: '12px' }}>
-            <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#16a34a', margin: 0 }}>{summary.totalDelivered || deliveredOrders.length}</p>
+            <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#16a34a', margin: 0 }}>{summary.deliveredCount || deliveredOrders.length}</p>
             <p style={{ fontSize: '12px', color: '#666' }}>طلبيات مسلّمة</p>
           </div>
           <div style={{ flex: 1, textAlign: 'center', padding: '16px', background: '#fff7ed', borderRadius: '12px' }}>
-            <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#ea580c', margin: 0 }}>{summary.totalReturned || returnedOrders.length}</p>
+            <p style={{ fontSize: '28px', fontWeight: 'bold', color: '#ea580c', margin: 0 }}>{summary.returnedCount || returnedOrders.length}</p>
             <p style={{ fontSize: '12px', color: '#666' }}>طلبيات مرتجعة</p>
           </div>
           <div style={{ flex: 1, textAlign: 'center', padding: '16px', background: '#eff6ff', borderRadius: '12px' }}>
@@ -155,12 +155,12 @@ const InvoicePrintView = ({ invoiceId, adminToken, onClose }) => {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <tbody>
               {[
-                ['إجمالي المبالغ المحصّلة', fmt(summary.totalCollectedAmount), '#16a34a', '+'],
-                ['مصاريف التوصيل', fmt(summary.totalDeliveryFees), '#dc2626', '-'],
-                ['رسوم المتابعة', fmt(summary.totalFollowUpFees), '#ea580c', '-'],
-                ['غرامات المرتجعات', fmt(summary.totalReturnPenalties), '#dc2626', '-'],
-                ['مصاريف الإعلانات', fmt(summary.totalAdSpendDzd), '#7c3aed', '-'],
-                ['مصاريف مشتركة', fmt(summary.totalSharedExpensesForMerchant), '#7c3aed', '-'],
+                ['إجمالي المبالغ المحصّلة', fmt(summary.totalRevenuesDzd), '#16a34a', '+'],
+                ['مصاريف التوصيل', fmt(summary.totalDeliveryFeesDzd), '#dc2626', '-'],
+                ['رسوم المتابعة', fmt(summary.totalCommissionsDzd), '#ea580c', '-'],
+                ['غرامات المرتجعات', fmt(summary.returnedPenaltiesDzd), '#dc2626', '-'],
+                ['مصاريف الإعلانات', fmt(summary.adSpendDzd), '#7c3aed', '-'],
+                ['مصاريف مشتركة', fmt(summary.sharedExpensesDzd), '#7c3aed', '-'],
               ].map(([label, value, color, sign], idx) => (
                 <tr key={idx} style={{ borderBottom: '1px solid #f3f4f6' }}>
                   <td style={{ padding: '10px 0', color: '#444', fontSize: '14px' }}>
@@ -179,7 +179,7 @@ const InvoicePrintView = ({ invoiceId, adminToken, onClose }) => {
               ✅ الصافي المستحق للتاجر
             </p>
             <p style={{ fontSize: '24px', fontWeight: 'bold', color: 'white', margin: 0 }}>
-              {fmt(summary.netPayoutToMerchant)} <span style={{ fontSize: '14px', color: '#e8b923' }}>د.ج</span>
+              {fmt(summary.totalOwedDzd)} <span style={{ fontSize: '14px', color: '#e8b923' }}>د.ج</span>
             </p>
           </div>
         </div>
