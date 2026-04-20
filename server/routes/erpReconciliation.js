@@ -99,6 +99,8 @@ router.post('/upload-reconciliation', async (req, res) => {
         row['TrackingNumber'] ||
         row["Code d'envoi"] ||
         row['tracking'] ||
+        row['Code'] ||
+        row['code'] ||
         ''
       );
       const trackingNumber = rawTracking.toString().trim();
@@ -106,15 +108,15 @@ router.post('/upload-reconciliation', async (req, res) => {
       // نوع العملية (توصيل أو مرتجع)
       const rowType = (row['Type'] || row['type'] || '').toString().trim().toLowerCase();
       const prestationType = (row['Type de préstation'] || row['Type de prestation'] || '').toString().trim().toLowerCase();
-      const stateName = (row['State.Name'] || row['Statut'] || row['statut'] || '').toString().trim().toLowerCase();
+      const stateName = (row['State.Name'] || row['Statut'] || row['statut'] || row['الحالة'] || '').toString().trim().toLowerCase();
       
-      // المبلغ المحصّل (COD) — استخراج الرقم الأول بدقة لتجنب أخطاء مثل 3200/3200
+      // المبلغ المحصّل (COD) — منع أخطاء مثل 3200/3200 حيث يتم استخراج الرقم الأول فقط
       const rawMontantStr = (row['montant'] || row['TotalAmount'] || row['Montant'] || row['Montant (DA)'] || '0').toString();
       const montantMatch = rawMontantStr.match(/(\d+(?:\.\d+)?)/);
       let totalAmount = montantMatch ? parseFloat(montantMatch[1]) : 0;
       
       // رسوم التوصيل
-      const rawDeliveryStr = (row['Frais de livraison'] || row['DeliveryPrice'] || row['Frais livraison'] || '0').toString();
+      const rawDeliveryStr = (row['Frais de livraison'] || row['DeliveryPrice'] || row['Frais livraison'] || row['prix_l'] || '0').toString();
       const delMatch = rawDeliveryStr.match(/(\d+(?:\.\d+)?)/);
       let deliveryPrice = delMatch ? parseFloat(delMatch[1]) : 0;
 
@@ -126,10 +128,13 @@ router.post('/upload-reconciliation', async (req, res) => {
       // تنظيف: إزالة البادئة الدولية +213 وتحويلها إلى 0 
       const cleanPhone = rawPhone.replace(/^\+213/, '0').replace(/^213/, '0');
 
-      if (!trackingNumber) continue;
+      // تجاوز السطر إذا لم يكن هناك رقم تتبع ولا رقم هاتف للمطابقة به
+      if (!trackingNumber && cleanPhone.length < 9) {
+        continue;
+      }
 
       // ======================================================================
-      // البحث الذكي: أولاً بالـ trackingId أو deliveryTrackingId، ثم بالهاتف (Fallback)
+      // البحث الذكي: أولاً بالـ trackingId، ثم بالهاتف (Fallback)
       // ======================================================================
       let order = await ErpOrder.findOne({
         $or: [
@@ -241,8 +246,13 @@ router.post('/upload-reconciliation', async (req, res) => {
         rowType === 'hub' || 
         stateName === 'livré' || 
         stateName === 'delivered' ||
+        stateName === 'مسلم' ||
+        stateName === 'تم التوصيل' ||
+        stateName === 'تسليم' ||
         rowType.includes('livraison') ||
-        prestationType.includes('livraison')
+        prestationType.includes('livraison') ||
+        (sheetName && sheetName.toLowerCase().includes('paiements')) ||
+        (row['à recouvrir'] !== undefined && parseFloat(row['à recouvrir']) > 0)
       );
       
       const isReturned = (
@@ -250,6 +260,7 @@ router.post('/upload-reconciliation', async (req, res) => {
         rowType === 'return' || 
         stateName === 'retour' || 
         stateName === 'returned' ||
+        stateName === 'مرتجع' ||
         rowType === 'retour' ||
         rowType.includes('retour') ||
         prestationType.includes('retour')
@@ -418,6 +429,33 @@ router.post('/reset-merchant/:id', async (req, res) => {
     });
   } catch (error) {
     console.error('Reset Merchant Error:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء التصفير', details: error.message });
+  }
+});
+
+// ==========================================
+// POST /api/erp/reconciliation/reset-all
+// مسح جميع التسويات الخاطئة على كل الطلبيات
+// ==========================================
+router.post('/reset-all', async (req, res) => {
+  try {
+    const updateResult = await ErpOrder.updateMany(
+      { status: { $in: ['paid', 'returned'] } },
+      { 
+        $set: { 
+          status: 'shipped',
+          financials: {},
+          excelReconciliationDate: null
+        } 
+      }
+    );
+
+    res.json({ 
+      message: 'تم تصفير جميع التسويات بنجاح', 
+      modifiedCount: updateResult.modifiedCount 
+    });
+  } catch (error) {
+    console.error('Reset All Error:', error);
     res.status(500).json({ error: 'حدث خطأ أثناء التصفير', details: error.message });
   }
 });

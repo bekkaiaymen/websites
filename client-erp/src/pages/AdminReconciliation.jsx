@@ -73,6 +73,34 @@ const AdminReconciliation = () => {
     }
   };
 
+  const handleResetAll = async () => {
+    if(!window.confirm('🚨 تحذير خطير: هذا سيمسح جميع التسويات الحالية لجميع التجار (التي لم تحول لفواتير بعد)، هل أنت متأكد من رغبتك في البدء من جديد؟')) return;
+
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const response = await fetch(`${apiUrl}/api/erp/reconciliation/reset-all`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        alert(data.message + ' - عدد الطلبيات المصفرة: ' + data.modifiedCount);
+        window.location.reload();
+      } else {
+        setError(data.error || 'فشل مسح التسوية');
+      }
+    } catch (err) {
+      setError('حدث خطأ بالاتصال: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#1a120f] text-right" dir="rtl">
       <AdminNavbar onLogout={handleLogout} />
@@ -170,6 +198,20 @@ const AdminReconciliation = () => {
                   )}
                 </button>
               </form>
+            </div>
+
+            {/* زر المسح الشامل */}
+            <div className="mt-8 bg-red-900/10 border border-red-900/50 rounded-xl p-6 shadow-lg text-center">
+              <h2 className="text-xl font-bold text-red-400 mb-2 border-b border-red-900/50 pb-2">🚨 تنظيف بيانات الإكسل</h2>
+              <p className="text-gray-400 text-sm mb-4">في حال رفعت إكسل بالخطأ أو تداخلت البيانات. يمكنك تصفير كافة الطلبيات (المسددة) للبدء من جديد.</p>
+              <button
+                onClick={handleResetAll}
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 shadow-lg"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                مسح جميع التسويات حالياً
+              </button>
             </div>
           </div>
 
