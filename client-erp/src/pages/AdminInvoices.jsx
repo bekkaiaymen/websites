@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, RefreshCw, Plus, Eye, Calendar, DollarSign, TrendingUp, AlertCircle, Search, Filter, Printer } from 'lucide-react';
+import { FileText, Download, RefreshCw, Plus, Eye, Calendar, DollarSign, TrendingUp, AlertCircle, Search, Filter, Printer, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AdminNavbar from '../components/AdminNavbar';
 import InvoicePrintView from '../components/InvoicePrintView';
@@ -133,6 +133,24 @@ const AdminInvoices = () => {
     }
   };
 
+  const handleDeleteInvoice = async (invoiceId) => {
+    if (!window.confirm('هل أنت متأكد من مسح هذه الفاتورة؟ (هذه العملية لا يمكن التراجع عنها)')) return;
+    
+    try {
+      const res = await fetch(`${apiUrl}/api/erp/invoices/${invoiceId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+
+      if (handleAuthError(res)) return;
+      if (!res.ok) throw new Error('فشل مسح الفاتورة');
+
+      await fetchInvoicesAndMerchants();
+    } catch (err) {
+      alert('خطأ: ' + err.message);
+    }
+  };
+
   const openDetailsModal = (invoice) => {
     setSelectedInvoice(invoice);
     setShowDetailsModal(true);
@@ -140,7 +158,7 @@ const AdminInvoices = () => {
 
   const getMerchantName = (merchantId) => {
     const merchant = merchants.find(m => m._id === merchantId);
-    return merchant?.businessName || 'غير معروف';
+    return merchant?.businessName || merchant?.name || merchant?.ownerName || 'بدون اسم';
   };
 
   const filteredInvoices = invoices.filter(invoice => {
@@ -198,16 +216,35 @@ const AdminInvoices = () => {
             />
           </div>
 
-          <select
-            value={selectedMerchant}
-            onChange={(e) => setSelectedMerchant(e.target.value)}
-            className="bg-[#2a1f1a] border border-gray-700 rounded-lg px-4 py-2 text-white"
-          >
-            <option value="all">جميع التجار</option>
+          <input
+            list="merchants-filter-list"
+            placeholder="جميع التجار..."
+            value={
+              selectedMerchant === 'all' 
+                ? '' 
+                : (merchants.find(m => m._id === selectedMerchant)?.businessName || merchants.find(m => m._id === selectedMerchant)?.name || merchants.find(m => m._id === selectedMerchant)?.ownerName || selectedMerchant)
+            }
+            onChange={(e) => {
+              const typed = e.target.value;
+              if (!typed) {
+                setSelectedMerchant('all');
+                return;
+              }
+              const selected = merchants.find(m => 
+                m.businessName === typed || 
+                m.name === typed || 
+                m.ownerName === typed ||
+                m._id === typed
+              );
+              setSelectedMerchant(selected ? selected._id : typed);
+            }}
+            className="bg-[#2a1f1a] border border-gray-700 rounded-lg px-4 py-2 text-white w-full"
+          />
+          <datalist id="merchants-filter-list">
             {merchants.map(m => (
-              <option key={m._id} value={m._id}>{m.businessName}</option>
+              <option key={m._id} value={m.businessName || m.name || m.ownerName || 'بدون اسم'} />
             ))}
-          </select>
+          </datalist>
         </div>
 
         {/* Statistics */}
@@ -298,6 +335,13 @@ const AdminInvoices = () => {
                           >
                             <Printer className="w-4 h-4" />
                           </button>
+                          <button
+                            onClick={() => handleDeleteInvoice(invoice._id)}
+                            className="p-2 hover:bg-gray-600/30 text-gray-500 hover:text-red-500 rounded transition-colors"
+                            title="حذف"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                       <td className="p-4 font-bold text-green-400">{(invoice.summary?.totalOwedDzd || 0).toLocaleString('ar-DZ')} د.ج</td>
@@ -325,17 +369,34 @@ const AdminInvoices = () => {
             <form onSubmit={handleGenerateInvoice} className="space-y-4">
               <div>
                 <label className="text-gray-300 block mb-1">اختر التاجر *</label>
-                <select
+                <input
                   required
-                  value={generateForm.merchantId}
-                  onChange={(e) => setGenerateForm({...generateForm, merchantId: e.target.value})}
+                  type="text"
+                  list="merchants-generate-list"
+                  placeholder="-- اكتب أو اختر التاجر --"
+                  value={
+                    merchants.find(m => m._id === generateForm.merchantId)?.businessName || 
+                    merchants.find(m => m._id === generateForm.merchantId)?.name || 
+                    merchants.find(m => m._id === generateForm.merchantId)?.ownerName || 
+                    generateForm.merchantId
+                  }
+                  onChange={(e) => {
+                    const typed = e.target.value;
+                    const selected = merchants.find(m => 
+                      m.businessName === typed || 
+                      m.name === typed || 
+                      m.ownerName === typed ||
+                      m._id === typed
+                    );
+                    setGenerateForm({...generateForm, merchantId: selected ? selected._id : typed});
+                  }}
                   className="w-full bg-[#1a120f] border border-gray-700 rounded p-2 text-white"
-                >
-                  <option value="" className="text-gray-200 bg-[#1a120f]">-- اختر --</option>
+                />
+                <datalist id="merchants-generate-list">
                   {merchants.map(m => (
-                    <option key={m._id} value={m._id} className="text-white bg-[#1a120f]">{m.businessName}</option>
+                    <option key={m._id} value={m.businessName || m.name || m.ownerName || 'بدون اسم'} />
                   ))}
-                </select>
+                </datalist>
               </div>
 
               <div>

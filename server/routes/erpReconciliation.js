@@ -388,4 +388,38 @@ router.put('/order-override/:id', async (req, res) => {
   }
 });
 
+// ==========================================
+// POST /api/erp/reconciliation/reset-merchant/:id
+// تصفير طلبيات التاجر (إعادتها لحالة shipped ومسح الحسابات) لإعادة قراءة الإكسل
+// ==========================================
+router.post('/reset-merchant/:id', async (req, res) => {
+  try {
+    const merchantId = req.params.id;
+
+    // تحديث جميع الطلبيات التي تخص هذا التاجر وكانت إما paid أو returned
+    // وجعلها shipped مرة أخرى مع مسح الأموال.
+    const updateResult = await ErpOrder.updateMany(
+      { 
+        merchantId: merchantId,
+        status: { $in: ['paid', 'returned'] }
+      },
+      { 
+        $set: { 
+          status: 'shipped',
+          financials: {},
+          excelReconciliationDate: null
+        } 
+      }
+    );
+
+    res.json({ 
+      message: 'تم تصفير طلبيات التاجر بنجاح', 
+      modifiedCount: updateResult.modifiedCount 
+    });
+  } catch (error) {
+    console.error('Reset Merchant Error:', error);
+    res.status(500).json({ error: 'حدث خطأ أثناء التصفير', details: error.message });
+  }
+});
+
 module.exports = router;

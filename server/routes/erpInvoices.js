@@ -669,4 +669,47 @@ router.get('/:id/data', async (req, res) => {
   }
 });
 
+// ========================================================
+// DELETE /api/erp/invoices/:id
+// مسح فاتورة من قاعدة البيانات وتصفير الطلبيات المرتبطة بها
+// ========================================================
+router.delete('/:id', async (req, res) => {
+  try {
+    const invoiceId = req.params.id;
+    
+    // إيجاد الفاتورة أولاً الاحتفاظ ببيانات التاجر والفترة
+    const invoice = await ErpInvoice.findById(invoiceId);
+    if (!invoice) {
+      return res.status(404).json({ error: 'الفاتورة غير موجودة' });
+    }
+
+    // تصفير الطلبيات (جعل حالتها shipped ومسح البيانات المالية)
+    const updateResult = await ErpOrder.updateMany(
+      {
+        merchantId: invoice.merchantId,
+        status: { $in: ['paid', 'returned'] },
+        excelReconciliationDate: {
+          $gte: new Date(invoice.periodStartDate),
+          $lte: new Date(invoice.periodEndDate)
+        }
+      },
+      {
+        $set: {
+          status: 'shipped',
+          financials: {},
+          excelReconciliationDate: null
+        }
+      }
+    );
+
+    // حذف الفاتورة
+    await ErpInvoice.findByIdAndDelete(invoiceId);
+    
+    res.json({ message: `تم مسح الفاتورة بنجاح، وتم تصفير عدد ${updateResult.modifiedCount} طلبية لتعود إلى حالة بانتظار التسوية.` });
+  } catch (error) {
+    console.error('Delete Invoice Error:', error);
+    res.status(500).json({ error: 'فشل مسح الفاتورة', details: error.message });
+  }
+});
+
 module.exports = router;

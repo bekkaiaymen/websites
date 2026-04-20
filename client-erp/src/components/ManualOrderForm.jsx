@@ -246,18 +246,37 @@ const ManualOrderForm = ({ userRole = 'admin', userMerchantId = null }) => {
         {userRole === 'admin' && (
           <div className="bg-[#1a120f] p-4 rounded-lg border border-brand-gold/10">
             <label className="block text-brand-gold font-semibold mb-2">اختر التاجر *</label>
-            <select
-              name="merchantId"
-              value={formData.merchantId}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-[#2a1f18] text-white border border-brand-gold/30 rounded-lg focus:outline-none focus:border-brand-gold"
+            <input
               required
-            >
-              <option value="">-- اختر تاجر --</option>
+              type="text"
+              list="merchant-options"
+              placeholder="-- اكتب أو اختر تاجر --"
+              value={
+                merchants.find(m => m._id === formData.merchantId)?.name || 
+                merchants.find(m => m._id === formData.merchantId)?.businessName || 
+                merchants.find(m => m._id === formData.merchantId)?.ownerName || 
+                formData.merchantId
+              }
+              onChange={(e) => {
+                const typed = e.target.value;
+                const selected = merchants.find(m => 
+                  m.name === typed || 
+                  m.businessName === typed || 
+                  m.ownerName === typed || 
+                  m._id === typed
+                );
+                setFormData(prev => ({
+                  ...prev,
+                  merchantId: selected ? selected._id : typed
+                }));
+              }}
+              className="w-full px-4 py-2 bg-[#2a1f18] text-white border border-brand-gold/30 rounded-lg focus:outline-none focus:border-brand-gold"
+            />
+            <datalist id="merchant-options">
               {merchants.map(m => (
-                <option key={m._id} value={m._id}>{m.name}</option>
+                <option key={m._id} value={m.name || m.businessName || m.ownerName || 'بدون اسم'} />
               ))}
-            </select>
+            </datalist>
           </div>
         )}
 
